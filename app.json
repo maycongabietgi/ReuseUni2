@@ -2,6 +2,7 @@
   "expo": {
     "name": "ReuseUni2",
     "slug": "ReuseUni2",
+    "scheme": "reuseuni2",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -21,10 +22,34 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.qh20166.ReuseUni2"
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-web-browser",
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "react-native",
+          "organization": "tran-quang-huy"
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "0b8c9e65-d988-41f4-8d91-559532343aad"
+      }
+    },
+    "owner": "qh20166",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/0b8c9e65-d988-41f4-8d91-559532343aad"
     }
   }
 }
