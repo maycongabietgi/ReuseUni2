@@ -41,7 +41,7 @@ export default function LoginScreen({ navigation }: Props) {
 
       if (authentication?.accessToken) {
         AsyncStorage.setItem('userToken', authentication.accessToken);
-        console.log('🔑 Token đã lưu:', authentication.accessToken);
+        console.log(' Token đã lưu:', authentication.accessToken);
         navigation.replace('Home');
       } else {
         Alert.alert('Lỗi', 'Không lấy được token Google');

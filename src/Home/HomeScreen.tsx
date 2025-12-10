@@ -6,11 +6,12 @@ import {
   FlatList,
   TouchableOpacity,
   SafeAreaView,
+  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../AppNavigator';
-import { styles, CARD_WIDTH } from './HomeScreen.styles';
+import { styles } from './HomeScreen.styles';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -31,6 +32,7 @@ const products = [
     image:
       'https://static.nike.com/a/images/t_prod/f_auto,q_auto:eco/1a8c3b6b-0a2b-4b0f-9f7f-2a8d6b3d8b0b/react-runner.jpg',
     discount: 60,
+    link: 'https://www.nike.com/t/react-runner',
   },
   {
     id: '2',
@@ -41,15 +43,28 @@ const products = [
     image:
       'https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-xr-blue-select-2018?wid=940&hei=1112&fmt=png-alpha&.v=1566956144788',
     discount: 0,
+    link: 'https://www.apple.com/iphone-xr/',
   },
-  // ... các sản phẩm khác
 ];
 
 export default function HomeScreen({ navigation }: Props) {
+  const handleOpenLink = (url: string) => {
+    Linking.canOpenURL(url)
+      .then((supported) => {
+        if (supported) Linking.openURL(url);
+        else console.log("Không mở được link:", url);
+      })
+      .catch((err) => console.error('Lỗi mở link:', err));
+  };
+
   const renderProduct = ({ item }: { item: typeof products[0] }) => {
     const soldPercent = Math.min(1, item.sold / (item.maxSold || 40));
+
     return (
-      <View style={styles.card}>
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => handleOpenLink(item.link)}
+      >
         {item.discount > 0 && (
           <View style={styles.discountTag}>
             <Text style={styles.discountText}>-{item.discount}%</Text>
@@ -66,7 +81,7 @@ export default function HomeScreen({ navigation }: Props) {
           />
         </View>
         <Text style={styles.priceText}>USD {item.price.toFixed(2)}</Text>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -74,13 +89,20 @@ export default function HomeScreen({ navigation }: Props) {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity>
+        {/* Sidebar / Menu */}
+        <TouchableOpacity
+          onPress={() => navigation.navigate('SideBar')} // Sidebar vẫn là màn hình Stack
+        >
           <Image source={require('../assets/ic_menu.png')} style={styles.icon} />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>Shop</Text>
 
-        <TouchableOpacity style={styles.cartBtn}>
+        {/* Cart */}
+        <TouchableOpacity
+          style={styles.cartBtn}
+          onPress={() => navigation.navigate('Account')}
+        >
           <Image source={require('../assets/ic_bag.png')} style={styles.icon} />
           <View style={styles.badge}>
             <Text style={styles.badgeText}>3</Text>
@@ -89,18 +111,18 @@ export default function HomeScreen({ navigation }: Props) {
       </View>
 
       {/* Banner */}
-      <LinearGradient colors={['#6C8CFF', '#8FB1FF']} style={styles.banner}>
-        <View style={styles.bannerText}>
-          <Text style={styles.bannerTitle}>NEW YEAR, NEW ME</Text>
-          <Text style={styles.bannerSubtitle}>BEST DEALS UP TO 80% OFF</Text>
-        </View>
-        <Image
-          source={{
-            uri: 'https://cdn-icons-png.flaticon.com/512/2086/2086578.png',
-          }}
-          style={styles.bannerImage}
-        />
-      </LinearGradient>
+      <TouchableOpacity onPress={() => handleOpenLink('https://www.example.com/banner')}>
+        <LinearGradient colors={['#6C8CFF', '#8FB1FF']} style={styles.banner}>
+          <View style={styles.bannerText}>
+            <Text style={styles.bannerTitle}>NEW YEAR, NEW ME</Text>
+            <Text style={styles.bannerSubtitle}>BEST DEALS UP TO 80% OFF</Text>
+          </View>
+          <Image
+            source={{ uri: 'https://cdn-icons-png.flaticon.com/512/2086/2086578.png' }}
+            style={styles.bannerImage}
+          />
+        </LinearGradient>
+      </TouchableOpacity>
 
       {/* Product Grid */}
       <FlatList
@@ -116,8 +138,7 @@ export default function HomeScreen({ navigation }: Props) {
       {/* Floating Search Button */}
       <TouchableOpacity
         style={styles.floatingButton}
-        onPress={() => navigation.navigate('Search')}
-        testID="floating-search-btn"
+        onPress={() => handleOpenLink('https://www.example.com/search')}
       >
         <Image source={require('../assets/ic_search.png')} style={styles.searchIcon} />
       </TouchableOpacity>

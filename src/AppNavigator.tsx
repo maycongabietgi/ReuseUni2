@@ -17,7 +17,7 @@ import OrdersScreen from './Activity/OrdersScreen';
 import OrdersShipped from './Activity/OrdersRequested';
 import ReviewScreen from './Activity/ReviewScreen';
 import MyShopScreen from './MyShop/MyShopScreen';
-// import SideBar from './components/SideMenu/SideBar';
+import SideBar from './components/SideMenu/SideBar';
 import AddProductScreen from './MyShop/AddProductScreen';
 import ShopSettingsScreen from './MyShop/ShopSettingsScreen';
 
@@ -59,7 +59,7 @@ export default function AppNavigator() {
   return (
     <NavigationContainer>
       <Stack.Navigator
-        initialRouteName="Splash"
+        initialRouteName="Home"
         screenOptions={{ headerShown: false }}
       >
         <Stack.Screen name="Home" component={HomeScreen} />
@@ -79,7 +79,7 @@ export default function AppNavigator() {
         <Stack.Screen name="AddProduct" component={AddProductScreen} />
         <Stack.Screen name="ShopSettings" component={ShopSettingsScreen} />
         <Stack.Screen name="EditAddress" component={EditAddressScreen} />
-        {/* <Stack.Screen name="SideBar" component={SideBar} /> */}
+        <Stack.Screen name="SideBar" component={SideBar} />
       </Stack.Navigator>
     </NavigationContainer>
   );
