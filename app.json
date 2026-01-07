@@ -37,7 +37,8 @@
           "project": "react-native",
           "organization": "tran-quang-huy"
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {

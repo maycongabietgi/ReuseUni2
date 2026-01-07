@@ -1,5 +1,4 @@
-// SearchScreen.tsx - FULL CODE HOÀN CHỈNH, CHỈ LẤY DỮ LIỆU TỪ API THẬT
-
+// SearchScreen.tsx
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   SafeAreaView,
@@ -11,16 +10,17 @@ import {
   FlatList,
   ActivityIndicator,
   StatusBar,
-  Keyboard,
   Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import BottomSheet from '@gorhom/bottom-sheet';
 import Slider from '@react-native-community/slider';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { styles } from './SearchScreen.styles';
 
-// Interface cho API thật
+const SEARCH_HISTORY_KEY = 'search_history';
+
 interface Category {
   id: number;
   name: string;
@@ -44,40 +44,114 @@ export default function SearchScreen() {
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [loadingResults, setLoadingResults] = useState(false);
 
-  // Filter state (giữ lại để sau mở rộng)
   const [priceMin, setPriceMin] = useState(0);
   const [priceMax, setPriceMax] = useState(500000);
 
-  // Bottom sheet
   const bottomSheetRef = useRef<BottomSheet>(null);
   const snapPoints = useMemo(() => ['80%'], []);
 
-  // Categories từ API
   const [categories, setCategories] = useState<Category[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
 
-  // Fetch categories từ API
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        setLoadingCategories(true);
-        const response = await fetch('https://bkapp-mp8l.onrender.com/categories/');
-        if (!response.ok) throw new Error('Network error');
-        const data: Category[] = await response.json();
-        setCategories(data);
-      } catch (error) {
-        console.error('Lỗi fetch categories:', error);
-        Alert.alert('Lỗi', 'Không thể tải danh mục. Vui lòng thử lại.');
-        setCategories([]);
-      } finally {
-        setLoadingCategories(false);
-      }
-    };
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [loadingAllProducts, setLoadingAllProducts] = useState(true);
 
+  // Lịch sử tìm kiếm từ local
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+
+  // Mảng màu cho category
+  const categoryColors = [
+    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57',
+    '#FF9FF3', '#54A0FF', '#48DBFB', '#A0A6FF', '#FF8B94',
+  ];
+
+  // Trending giả lập
+  const trendingSearches = [
+    'FILA Sweater',
+    'Anello Messenger Bags',
+    'Windows Surface 10',
+    'FILA Sweater',
+  ];
+
+  // Load lịch sử khi mở màn hình
+  useEffect(() => {
+    loadSearchHistory();
     fetchCategories();
+    fetchAllProducts();
   }, []);
 
-  // Hàm search sản phẩm từ API thật
+  const loadSearchHistory = async () => {
+    try {
+      const historyJson = await AsyncStorage.getItem(SEARCH_HISTORY_KEY);
+      if (historyJson) {
+        const history = JSON.parse(historyJson);
+        setSearchHistory(history);
+      }
+    } catch (error) {
+      console.error('Lỗi load lịch sử tìm kiếm:', error);
+    }
+  };
+
+  const saveSearchHistory = async (newHistory: string[]) => {
+    try {
+      await AsyncStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(newHistory));
+      setSearchHistory(newHistory);
+    } catch (error) {
+      console.error('Lỗi lưu lịch sử tìm kiếm:', error);
+    }
+  };
+
+  const addToHistory = (query: string) => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+
+    // Xóa nếu đã có, rồi thêm lên đầu
+    const filtered = searchHistory.filter(item => item !== trimmed);
+    const newHistory = [trimmed, ...filtered].slice(0, 10); // Giới hạn 10 mục
+
+    saveSearchHistory(newHistory);
+  };
+
+  const clearHistory = async () => {
+    try {
+      await AsyncStorage.removeItem(SEARCH_HISTORY_KEY);
+      setSearchHistory([]);
+    } catch (error) {
+      console.error('Lỗi xóa lịch sử:', error);
+    }
+  };
+
+  const fetchCategories = async () => {
+    try {
+      setLoadingCategories(true);
+      const response = await fetch('https://bkapp-mp8l.onrender.com/categories/');
+      if (!response.ok) throw new Error('Network error');
+      const data: Category[] = await response.json();
+      setCategories(data);
+    } catch (error) {
+      console.error('Lỗi fetch categories:', error);
+      setCategories([]);
+    } finally {
+      setLoadingCategories(false);
+    }
+  };
+
+  const fetchAllProducts = async () => {
+    try {
+      setLoadingAllProducts(true);
+      const response = await fetch('https://bkapp-mp8l.onrender.com/products?search=');
+      if (!response.ok) throw new Error('Network error');
+      const data = await response.json();
+      const productList: Product[] = data.results || data || [];
+      setAllProducts(productList);
+    } catch (error) {
+      console.error('Lỗi fetch all products:', error);
+      setAllProducts([]);
+    } finally {
+      setLoadingAllProducts(false);
+    }
+  };
+
   const performSearch = async (query: string) => {
     const q = query.trim();
     if (!q) {
@@ -85,6 +159,9 @@ export default function SearchScreen() {
       setSearchResults([]);
       return;
     }
+
+    // Lưu vào lịch sử trước khi search
+    addToHistory(q);
 
     setSearchText(q);
     setIsSearching(true);
@@ -94,12 +171,11 @@ export default function SearchScreen() {
       const url = `https://bkapp-mp8l.onrender.com/products?search=${encodeURIComponent(q)}`;
       const response = await fetch(url);
       if (!response.ok) throw new Error('API error');
-
       const data = await response.json();
-      setSearchResults(data.results || []);
+      setSearchResults(data.results || data || []);
     } catch (error) {
-      console.error('Lỗi search sản phẩm:', error);
-      Alert.alert('Lỗi', 'Không thể tìm kiếm sản phẩm. Vui lòng thử lại.');
+      console.error('Lỗi search:', error);
+      Alert.alert('Lỗi', 'Không thể tìm kiếm. Vui lòng thử lại.');
       setSearchResults([]);
     } finally {
       setLoadingResults(false);
@@ -109,16 +185,16 @@ export default function SearchScreen() {
   const handleSearchPress = () => performSearch(searchText);
 
   const handleCategoryPress = (categoryName: string) => {
+    setSearchText(categoryName);
     performSearch(categoryName);
   };
 
   const handleBack = () => {
-    if (isSearching) {
+    if (isSearching || searchText.length > 0) {
       setIsSearching(false);
       setSearchText('');
       setSearchResults([]);
     } else {
-      Keyboard.dismiss();
       navigation.goBack();
     }
   };
@@ -126,70 +202,169 @@ export default function SearchScreen() {
   const openFilter = () => bottomSheetRef.current?.expand();
   const closeFilter = () => bottomSheetRef.current?.close();
 
-  // Render Category từ API
-  const renderCategory = ({ item }: { item: Category }) => (
-    <TouchableOpacity
-      style={[styles.trendingTag, { backgroundColor: '#4D5BFF' }]}
-      onPress={() => handleCategoryPress(item.name)}
-    >
-      <View style={{ alignItems: 'center', justifyContent: 'center', padding: 8 }}>
-        <Text style={styles.trendingText} numberOfLines={2}>
-          {item.name}
-        </Text>
-      </View>
+  // 3 sản phẩm rẻ nhất
+  const cheapestProducts = allProducts.length > 0
+    ? [...allProducts]
+      .sort((a, b) => parseInt(a.price) - parseInt(b.price))
+      .slice(0, 3)
+    : [];
+
+  // Sản phẩm nổi bật (ID = 1)
+  const featuredProduct = allProducts.find(p => p.id === 1);
+
+  const renderCategory = ({ item, index }: { item: Category; index: number }) => {
+    const color = categoryColors[index % categoryColors.length];
+    return (
+      <TouchableOpacity
+        style={[styles.categoryTag, { backgroundColor: color }]}
+        onPress={() => handleCategoryPress(item.name)}
+      >
+        <Text style={styles.categoryTagText}>{item.name}</Text>
+      </TouchableOpacity>
+    );
+  };
+
+  const renderHistoryItem = (history: string) => (
+    <TouchableOpacity style={styles.historyItem} onPress={() => performSearch(history)}>
+      <Text style={styles.historyText}>{history}</Text>
     </TouchableOpacity>
   );
 
-  // Render sản phẩm từ API
+  const renderTrending = (trend: string, index: number) => (
+    <View style={[styles.trendingTag, { backgroundColor: categoryColors[index % categoryColors.length] }]}>
+      <Text style={styles.trendingText}>{trend}</Text>
+    </View>
+  );
+
   const renderResultProduct = ({ item }: { item: Product }) => (
-    <TouchableOpacity style={styles.resultProductCard}>
-      <Image
-        source={{ uri: item.image || 'https://via.placeholder.com/150' }}
-        style={styles.resultProductImage}
-        resizeMode="cover"
-      />
+    <TouchableOpacity
+      style={styles.resultCard}
+      onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
+    >
+      <Image source={{ uri: item.image }} style={styles.resultImage} resizeMode="cover" />
       <View style={styles.resultInfo}>
-        <Text style={styles.resultProductName} numberOfLines={2}>
-          {item.title}
-        </Text>
-        <Text style={styles.categoryName}>{item.category_name}</Text>
-        <Text style={styles.resultCurrentPrice}>
-          {parseInt(item.price).toLocaleString('vi-VN')} ₫
-        </Text>
-        <Text style={styles.conditionText}>{item.condition_display}</Text>
-        <Text style={styles.descriptionText} numberOfLines={2}>
-          {item.description}
-        </Text>
+        <Text style={styles.resultTitle} numberOfLines={2}>{item.title}</Text>
+        <Text style={styles.resultPrice}>{parseInt(item.price).toLocaleString('vi-VN')} ₫</Text>
       </View>
     </TouchableOpacity>
   );
 
   const DefaultContent = () => (
-    <>
-      {loadingCategories ? (
-        <ActivityIndicator size="large" color="#4D5BFF" style={{ marginVertical: 40 }} />
-      ) : categories.length === 0 ? (
-        <Text style={{ textAlign: 'center', color: '#666', marginVertical: 40 }}>
-          Không có danh mục nào
-        </Text>
-      ) : (
-        <FlatList
-          data={categories}
-          renderItem={renderCategory}
-          keyExtractor={item => item.id.toString()}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.categoryList}
-          contentContainerStyle={{ paddingHorizontal: 8 }}
-        />
-      )}
-    </>
+    <View style={styles.defaultContainer}>
+      {/* Danh mục */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Danh mục</Text>
+        {loadingCategories ? (
+          <ActivityIndicator color="#4D5BFF" />
+        ) : categories.length === 0 ? (
+          <Text style={styles.emptyText}>Không có danh mục</Text>
+        ) : (
+          <FlatList
+            data={categories}
+            renderItem={renderCategory}
+            keyExtractor={item => item.id.toString()}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+          />
+        )}
+      </View>
+
+      {/* 3 sản phẩm rẻ nhất */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Sản phẩm rẻ nhất</Text>
+        {loadingAllProducts ? (
+          <ActivityIndicator color="#4D5BFF" />
+        ) : cheapestProducts.length === 0 ? (
+          <Text style={styles.emptyText}>Không có sản phẩm</Text>
+        ) : (
+          <View style={styles.cheapestRow}>
+            {cheapestProducts[0] && (
+              <TouchableOpacity
+                style={styles.cheapestBigCard}
+                onPress={() => navigation.navigate('ProductDetail', { productId: cheapestProducts[0].id })}
+              >
+                <Image source={{ uri: cheapestProducts[0].image }} style={styles.cheapestBigImage} />
+                <View style={styles.cheapestInfo}>
+                  <Text style={styles.cheapestTitle} numberOfLines={2}>{cheapestProducts[0].title}</Text>
+                  <Text style={styles.cheapestPrice}>{parseInt(cheapestProducts[0].price).toLocaleString('vi-VN')} ₫</Text>
+                </View>
+              </TouchableOpacity>
+            )}
+
+            <View style={styles.cheapestSmallColumn}>
+              {cheapestProducts.slice(1, 3).map((product) => (
+                <TouchableOpacity
+                  key={product.id}
+                  style={styles.cheapestSmallCard}
+                  onPress={() => navigation.navigate('ProductDetail', { productId: product.id })}
+                >
+                  <Image source={{ uri: product.image }} style={styles.cheapestSmallImage} />
+                  <View style={styles.cheapestInfo}>
+                    <Text style={styles.cheapestSmallTitle} numberOfLines={2}>{product.title}</Text>
+                    <Text style={styles.cheapestSmallPrice}>{parseInt(product.price).toLocaleString('vi-VN')} ₫</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
+      </View>
+
+      {/* Sản phẩm nổi bật */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Sản phẩm nổi bật</Text>
+        {featuredProduct ? (
+          <TouchableOpacity
+            style={styles.featuredCard}
+            onPress={() => navigation.navigate('ProductDetail', { productId: featuredProduct.id })}
+          >
+            <Image source={{ uri: featuredProduct.image }} style={styles.featuredImage} />
+            <View style={styles.featuredInfo}>
+              <Text style={styles.featuredTitle} numberOfLines={2}>{featuredProduct.title}</Text>
+              <Text style={styles.featuredPrice}>{parseInt(featuredProduct.price).toLocaleString('vi-VN')} ₫</Text>
+            </View>
+          </TouchableOpacity>
+        ) : (
+          <Text style={styles.emptyText}>Không có sản phẩm nổi bật</Text>
+        )}
+      </View>
+    </View>
+  );
+
+  const InputFocusedContent = () => (
+    <View style={styles.inputFocusedContainer}>
+      <View style={styles.historyHeader}>
+        <Text style={styles.historyTitle}>Lịch sử tìm kiếm</Text>
+        {searchHistory.length > 0 && (
+          <TouchableOpacity onPress={clearHistory}>
+            <Text style={styles.clearText}>Clear</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+      <View style={styles.historyList}>
+        {searchHistory.map((item, index) => (
+          <View key={index}>{renderHistoryItem(item)}</View>
+        ))}
+      </View>
+
+      <View style={styles.trendingHeader}>
+        <Text style={styles.trendingTitle}>Tìm kiếm phổ biến</Text>
+        <TouchableOpacity>
+          <Text style={styles.viewAllText}>View All</Text>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.trendingList}>
+        {trendingSearches.map((item, index) => (
+          <View key={index}>{renderTrending(item, index)}</View>
+        ))}
+      </View>
+    </View>
   );
 
   const ResultsContent = () => (
-    <>
-      <View style={styles.sortFilterRow}>
-        <Text style={styles.sortText}>Kết quả tìm kiếm: "{searchText}"</Text>
+    <View style={styles.resultsContainer}>
+      <View style={styles.resultsHeader}>
+        <Text style={styles.resultsTitle}>Kết quả tìm kiếm: "{searchText}"</Text>
         <TouchableOpacity style={styles.filterBtn} onPress={openFilter}>
           <Image source={require('../assets/ic_filter.png')} style={styles.filterIcon} />
           <Text style={styles.filterText}>Lọc</Text>
@@ -209,50 +384,44 @@ export default function SearchScreen() {
           keyExtractor={item => item.id.toString()}
           numColumns={2}
           columnWrapperStyle={styles.resultColumnWrapper}
-          contentContainerStyle={styles.resultListContainer}
+        //contentContainerStyle={styles.resultListContainer}
         />
       )}
-    </>
+    </View>
   );
 
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
 
       <LinearGradient colors={['#5D7CFF', '#8FA8FF']} style={styles.header}>
         <View style={styles.headerContainer}>
-          <TouchableOpacity style={styles.iconBtn} onPress={handleBack}>
-            <Image source={require('../assets/ic_back.png')} style={[styles.iconImage, { tintColor: '#ffffff' }]} />
+          <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
+            <Image source={require('../assets/ic_back.png')} style={styles.backIcon} />
           </TouchableOpacity>
 
-          {isSearching ? (
-            <View style={styles.resultTitleContainer}>
-              <Text style={styles.resultHeaderTitle} numberOfLines={1}>
-                {searchText}
-              </Text>
-            </View>
-          ) : (
-            <View style={styles.searchBar}>
+          <View style={styles.searchBarContainer}>
+            <View style={styles.searchInputWrapper}>
               <TextInput
-                style={styles.input}
+                style={styles.searchInput}
                 placeholder="Tìm sản phẩm..."
-                placeholderTextColor="#9AA4D7"
+                placeholderTextColor="#bbb"
                 value={searchText}
                 onChangeText={setSearchText}
                 returnKeyType="search"
                 onSubmitEditing={handleSearchPress}
               />
+              {searchText.length > 0 && (
+                <TouchableOpacity style={styles.clearBtn} onPress={() => setSearchText('')}>
+                  <Text style={styles.clearText}>×</Text>
+                </TouchableOpacity>
+              )}
             </View>
-          )}
 
-          {!isSearching && (
-            <TouchableOpacity style={[styles.iconBtn, { marginLeft: 8 }]} onPress={handleSearchPress}>
-              <Image
-                source={searchText.length > 0 ? require('../assets/ic_search.png') : require('../assets/ic_dot.png')}
-                style={[styles.iconImage, { tintColor: '#ffffff' }]}
-              />
+            <TouchableOpacity style={styles.searchBtn} onPress={handleSearchPress}>
+              <Image source={require('../assets/ic_search.png')} style={styles.searchBtnIcon} />
             </TouchableOpacity>
-          )}
+          </View>
         </View>
       </LinearGradient>
 
@@ -262,44 +431,43 @@ export default function SearchScreen() {
         renderItem={null}
         ListHeaderComponent={() => (
           <>
-            {isSearching ? <ResultsContent /> : <DefaultContent />}
+            {isSearching ? (
+              <ResultsContent />
+            ) : searchText.length > 0 ? (
+              <InputFocusedContent />
+            ) : (
+              <DefaultContent />
+            )}
           </>
         )}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
-        removeClippedSubviews={true}
       />
 
-      {/* Bottom Sheet Filter - giữ lại để sau mở rộng */}
       <BottomSheet ref={bottomSheetRef} index={-1} snapPoints={snapPoints} enablePanDownToClose>
-        <View style={styles.filterSheetContainer}>
+        <View style={styles.filterContainer}>
           <View style={styles.filterHeader}>
             <Text style={styles.filterTitle}>Bộ lọc</Text>
-            <TouchableOpacity onPress={closeFilter} style={{ marginLeft: 'auto' }}>
-              <Text style={{ fontSize: 28, color: '#000' }}>×</Text>
+            <TouchableOpacity onPress={closeFilter}>
+              <Text style={styles.closeFilter}>×</Text>
             </TouchableOpacity>
           </View>
-
-          <Text style={styles.filterSectionTitle}>Giá (VND)</Text>
-          <View style={styles.priceSliderContainer}>
-            <Slider
-              minimumValue={0}
-              maximumValue={500000}
-              step={10000}
-              minimumTrackTintColor="#4D5BFF"
-              maximumTrackTintColor="#ddd"
-              thumbTintColor="#4D5BFF"
-              value={priceMax}
-              onValueChange={setPriceMax}
-            />
-            <View style={styles.priceLabels}>
-              <Text style={styles.priceLabel}>0đ</Text>
-              <Text style={styles.priceLabel}>{priceMax.toLocaleString('vi-VN')}đ</Text>
-            </View>
+          <Text style={styles.filterLabel}>Giá (VND)</Text>
+          <Slider
+            minimumValue={0}
+            maximumValue={500000}
+            step={10000}
+            value={priceMax}
+            onValueChange={setPriceMax}
+            minimumTrackTintColor="#4D5BFF"
+            thumbTintColor="#4D5BFF"
+          />
+          <View style={styles.priceRange}>
+            <Text>0đ</Text>
+            <Text>{priceMax.toLocaleString('vi-VN')}đ</Text>
           </View>
-
           <TouchableOpacity style={styles.applyBtn} onPress={closeFilter}>
-            <Text style={styles.applyBtnText}>Áp dụng</Text>
+            <Text style={styles.applyText}>Áp dụng</Text>
           </TouchableOpacity>
         </View>
       </BottomSheet>

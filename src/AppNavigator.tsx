@@ -21,7 +21,8 @@ import SideBar from './components/SideMenu/SideBar';
 import AddProductScreen from './MyShop/AddProductScreen';
 import ShopSettingsScreen from './MyShop/ShopSettingsScreen';
 import SearchResultsScreen from './SearchResult/SearchResultsScreen';
-
+import ProductDetailScreen from './ProductDetail/ProductDetailScreen';
+import CartScreen from './Cart/CartScreen';
 export type RootStackParamList = {
   Home: undefined;
   Splash: undefined;
@@ -29,6 +30,7 @@ export type RootStackParamList = {
   Login: undefined;
   Search: undefined;
   SearchResults: undefined;
+  ProductDetail: { productId: number };
   Profile: undefined;
   Settings: undefined;
   SideBar: undefined;
@@ -42,6 +44,7 @@ export type RootStackParamList = {
   Review: { tradeId: number };
   // OrdersArriving: undefined;
   EditAddress: { address?: AddressType };
+  Cart: undefined;
 };
 
 export type AddressType = {
@@ -78,11 +81,12 @@ export default function AppNavigator() {
         <Stack.Screen name="Activity" component={ActivityScreen} />
         <Stack.Screen name="Orders" component={OrdersScreen} />
         <Stack.Screen name="Review" component={ReviewScreen} />
-
+        <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
         <Stack.Screen name="AddProduct" component={AddProductScreen} />
         <Stack.Screen name="ShopSettings" component={ShopSettingsScreen} />
         <Stack.Screen name="EditAddress" component={EditAddressScreen} />
         <Stack.Screen name="SideBar" component={SideBar} />
+        <Stack.Screen name="Cart" component={CartScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

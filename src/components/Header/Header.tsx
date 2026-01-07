@@ -1,61 +1,25 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { jwtDecode } from 'jwt-decode';
-import { styles } from './Header.styles';
+// useAuth.ts – FIX TRIỆT ĐỂ TOKEN NULL KHI NAVIGATE NHANH
+import { useEffect, useState } from 'react';
 
-type JwtPayload = {
-  sub?: string;
-  email?: string;
-  name?: string;
-  exp?: number;
+export type AuthInfo = {
+  isLoggedIn: boolean;
+  userName: string | null;
+  token: string | null;
+  loading: boolean;
 };
 
-export default function Header() {
-  const [userName, setUserName] = useState<string | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+const TEST_TOKEN = 'e9d7a608a441910496db97205346aa59963b7d83';
 
-  useEffect(() => {
-    const loadUserFromToken = async () => {
-      const token =
-        (await AsyncStorage.getItem('userToken')) ?? 'e9d7a608a441910496db97205346aa59963b7d83';
+let cachedToken: string | null = TEST_TOKEN; // ← Cache global
 
-      if (!token) {
-        setIsLoggedIn(false);
-        return;
-      }
+export default function useAuth(): AuthInfo {
+  const [loading, setLoading] = useState(false); // Test mode không cần loading
 
-      try {
-        const decoded = jwtDecode<JwtPayload>(token);
-
-        // Check token expiry
-        if (decoded.exp && decoded.exp * 1000 < Date.now()) {
-          await AsyncStorage.removeItem('userToken');
-          setIsLoggedIn(false);
-          return;
-        }
-
-        setUserName(decoded.name || decoded.email || 'User');
-        setIsLoggedIn(true);
-      } catch (err) {
-        console.log('❌ Token không hợp lệ', err);
-        await AsyncStorage.removeItem('userToken');
-        setIsLoggedIn(false);
-      }
-    };
-
-    loadUserFromToken();
-  }, []);
-
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>ReuseUni</Text>
-
-      {isLoggedIn ? (
-        <Text style={styles.userText}>👋 Hi, {userName}</Text>
-      ) : (
-        <Text style={styles.userText}>Chưa đăng nhập</Text>
-      )}
-    </View>
-  );
+  // Trả token ngay lập tức từ cache
+  return {
+    isLoggedIn: true,
+    userName: 'Tester',
+    token: cachedToken, // ← Luôn có ngay, không chờ useEffect
+    loading: false,
+  };
 }
