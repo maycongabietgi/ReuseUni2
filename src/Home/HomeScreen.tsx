@@ -11,7 +11,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../AppNavigator';
-import { styles } from './HomeScreen.styles';
+import { styles, CARD_WIDTH } from './HomeScreen.styles';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -27,7 +27,7 @@ const products = [
     id: '1',
     name: 'Nike React Flyknit',
     price: 120,
-    sold: 18,
+    sold: 33,
     maxSold: 40,
     image:
       'https://static.nike.com/a/images/t_prod/f_auto,q_auto:eco/1a8c3b6b-0a2b-4b0f-9f7f-2a8d6b3d8b0b/react-runner.jpg',
@@ -45,6 +45,28 @@ const products = [
     discount: 0,
     link: 'https://www.apple.com/iphone-xr/',
   },
+  {
+    id: '3',
+    name: 'Wireless Mouse',
+    price: 108,
+    sold: 33,
+    maxSold: 50,
+    image:
+      'https://cdn-icons-png.flaticon.com/512/3081/3081153.png',
+    discount: 60,
+    link: 'https://www.example.com/mouse',
+  },
+  {
+    id: '4',
+    name: 'Smart Watch',
+    price: 260,
+    sold: 38,
+    maxSold: 40,
+    image:
+      'https://cdn-icons-png.flaticon.com/512/2910/2910765.png',
+    discount: 0,
+    link: 'https://www.example.com/watch',
+  },
 ];
 
 export default function HomeScreen({ navigation }: Props) {
@@ -59,7 +81,6 @@ export default function HomeScreen({ navigation }: Props) {
 
   const renderProduct = ({ item }: { item: typeof products[0] }) => {
     const soldPercent = Math.min(1, item.sold / (item.maxSold || 40));
-
     return (
       <TouchableOpacity
         style={styles.card}
@@ -74,7 +95,9 @@ export default function HomeScreen({ navigation }: Props) {
         <Text style={styles.productName} numberOfLines={1}>
           {item.name}
         </Text>
-        <Text style={styles.soldText}>{item.sold} sold</Text>
+        <Text style={styles.soldText}>
+          {item.sold >= item.maxSold ? 'Only 1 left!' : `${item.sold} sold`}
+        </Text>
         <View style={styles.progressBar}>
           <View
             style={[styles.progressFill, { width: `${soldPercent * 100}%` }]}
@@ -89,16 +112,10 @@ export default function HomeScreen({ navigation }: Props) {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        {/* Sidebar / Menu */}
-        <TouchableOpacity
-          onPress={() => navigation.navigate('SideBar')} // Sidebar vẫn là màn hình Stack
-        >
+        <TouchableOpacity onPress={() => navigation.navigate('SideBar')}>
           <Image source={require('../assets/ic_menu.png')} style={styles.icon} />
         </TouchableOpacity>
-
         <Text style={styles.headerTitle}>Shop</Text>
-
-        {/* Cart */}
         <TouchableOpacity
           style={styles.cartBtn}
           onPress={() => navigation.navigate('Account')}
@@ -138,7 +155,7 @@ export default function HomeScreen({ navigation }: Props) {
       {/* Floating Search Button */}
       <TouchableOpacity
         style={styles.floatingButton}
-        onPress={() => handleOpenLink('https://www.example.com/search')}
+        onPress={() => navigation.navigate('Search')}
       >
         <Image source={require('../assets/ic_search.png')} style={styles.searchIcon} />
       </TouchableOpacity>

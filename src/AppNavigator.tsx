@@ -20,6 +20,7 @@ import MyShopScreen from './MyShop/MyShopScreen';
 import SideBar from './components/SideMenu/SideBar';
 import AddProductScreen from './MyShop/AddProductScreen';
 import ShopSettingsScreen from './MyShop/ShopSettingsScreen';
+import SearchResultsScreen from './SearchResult/SearchResultsScreen';
 
 export type RootStackParamList = {
   Home: undefined;
@@ -27,6 +28,7 @@ export type RootStackParamList = {
   Waiting: undefined;
   Login: undefined;
   Search: undefined;
+  SearchResults: undefined;
   Profile: undefined;
   Settings: undefined;
   SideBar: undefined;
@@ -70,6 +72,7 @@ export default function AppNavigator() {
         <Stack.Screen name="Waiting" component={WaitingScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Search" component={SearchScreen} />
+        <Stack.Screen name="SearchResults" component={SearchResultsScreen} />
         <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="Settings" component={SettingsScreen} />
         <Stack.Screen name="Activity" component={ActivityScreen} />
