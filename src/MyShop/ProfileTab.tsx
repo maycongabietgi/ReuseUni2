@@ -1,98 +1,191 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
+  Image,
   TouchableOpacity,
+  FlatList,
+  StyleSheet,
   ScrollView,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import useAuth from '../components/Header/Header'; // Điều chỉnh path nếu cần
 
-type RatingStats = {
-  5: number;
-  4: number;
-  3: number;
-  2: number;
-  1: number;
-};
-
-type ReviewType = {
+interface Review {
   id: number;
-  text: string;
-  stars: number;
-  time: string;
-  user?: string;
-};
+  rating: number;
+  comment: string;
+  created_at: string;
+  reviewer_name: string;
+  product_info: string;
+}
 
-const ratingStats: RatingStats = {
-  5: 48,
-  4: 12,
-  3: 4,
-  2: 1,
-  1: 5,
-};
+interface RatingStats {
+  avg_rating: number;
+  total_reviews: number;
+  distribution: {
+    1: number;
+    2: number;
+    3: number;
+    4: number;
+    5: number;
+  };
+}
 
-const reviews: ReviewType[] = [
-  {
-    id: 1,
-    text: "Bought a backpack and it's super clean!",
-    stars: 5,
-    time: '5 hours ago',
-  },
-  {
-    id: 2,
-    text: 'Seller is very friendly and quick to respond.',
-    stars: 4,
-    time: '8 hours ago',
-  },
-  {
-    id: 3,
-    text: 'Good value for second-hand goods.',
-    stars: 4,
-    time: '1 day ago',
-  },
-  {
-    id: 4,
-    text: 'The product looked exactly like the photo!',
-    stars: 5,
-    time: '2 days ago',
-  },
-  {
-    id: 5,
-    text: 'Fast delivery and well-packed item!',
-    stars: 5,
-    time: '3 days ago',
-  },
-];
+interface UserProfile {
+  id: number;
+  name: string;
+  // Các field khác nếu cần
+}
 
 export default function StoreProfileTab() {
-  const [stats] = useState<RatingStats>(ratingStats);
-  const [reviewList] = useState<ReviewType[]>(reviews);
+  const { token: authToken } = useAuth();
+
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [stats, setStats] = useState<RatingStats | null>(null);
+  const [userId, setUserId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Bước 1: Lấy ID người dùng hiện tại từ /api/me/
+  useEffect(() => {
+    const fetchUserId = async () => {
+      if (!authToken) {
+        setError('Vui lòng đăng nhập để xem đánh giá');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch('https://bkapp-mp8l.onrender.com/api/me/', {
+          headers: {
+            Authorization: `Token ${authToken}`,
+            Accept: 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Lỗi ${response.status}`);
+        }
+
+        const data: UserProfile = await response.json();
+        setUserId(data.id);
+      } catch (err: any) {
+        console.error('Lỗi fetch user ID:', err);
+        setError(err.message || 'Không thể xác định người dùng');
+      }
+    };
+
+    fetchUserId();
+  }, [authToken]);
+
+  // Bước 2: Fetch reviews & stats khi có userId
+  useEffect(() => {
+    if (!userId) return;
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        // Fetch reviews
+        const reviewsRes = await fetch(`https://bkapp-mp8l.onrender.com/users/${userId}/reviews`, {
+          headers: {
+            Authorization: `Token ${authToken}`,
+            Accept: 'application/json',
+          },
+        });
+
+        if (!reviewsRes.ok) throw new Error(`Lỗi reviews: ${reviewsRes.status}`);
+
+        const reviewsData = await reviewsRes.json();
+        setReviews(reviewsData || []);
+
+        // Fetch stats
+        const statsRes = await fetch(`https://bkapp-mp8l.onrender.com/reviews/stats/${userId}`, {
+          headers: {
+            Authorization: `Token ${authToken}`,
+            Accept: 'application/json',
+          },
+        });
+
+        if (!statsRes.ok) throw new Error(`Lỗi stats: ${statsRes.status}`);
+
+        const statsData = await statsRes.json();
+        setStats(statsData);
+      } catch (err: any) {
+        console.error('Lỗi fetch đánh giá:', err);
+        setError(err.message || 'Không thể tải đánh giá');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [authToken, userId]);
 
   const averageRating = useMemo(() => {
-    const totalVotes = Object.values(stats).reduce((a, b) => a + b, 0);
-    const weightedSum = Object.entries(stats).reduce(
-      (sum, [star, count]) => sum + Number(star) * count,
-      0,
-    );
-    return totalVotes ? (weightedSum / totalVotes).toFixed(1) : '0.0';
+    if (!stats) return '0.0';
+    return stats.avg_rating.toFixed(1);
   }, [stats]);
+
+  const renderReview = ({ item }: { item: Review }) => (
+    <View style={styles.reviewBox}>
+      <Text style={styles.reviewText}>{item.comment}</Text>
+
+      <View style={styles.starRow}>
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Ionicons
+            key={i}
+            name={i < item.rating ? 'star' : 'star-outline'}
+            size={14}
+            color="#2D7FF9"
+          />
+        ))}
+      </View>
+
+      <Text style={styles.timeText}>
+        {new Date(item.created_at).toLocaleString('vi-VN', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        })}
+      </Text>
+
+      <Text style={styles.reviewerText}>Từ: {item.reviewer_name}</Text>
+      <Text style={styles.productInfo}>Sản phẩm: {item.product_info}</Text>
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2D7FF9" />
+        <Text style={styles.loadingText}>Đang tải đánh giá...</Text>
+      </View>
+    );
+  }
+
+  if (error || !stats) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error || 'Chưa có đánh giá nào'}</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      {/* Scrollable Content */}
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        style={{ paddingTop: 10, flex: 1 }}
-      >
-        {/* Followers */}
-        <View style={styles.statsRow}>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Followers & Stats */}
+        {/* <View style={styles.statsRow}>
           <View style={styles.statBox}>
             <Text style={styles.statNumber}>1,248</Text>
-            <Text style={styles.statLabel}>Followers</Text>
+            <Text style={styles.statLabel}>Người theo dõi</Text>
           </View>
-        </View>
+        </View> */}
 
         <View style={styles.divider} />
 
@@ -101,76 +194,58 @@ export default function StoreProfileTab() {
           <View style={styles.ratingHeader}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text style={styles.ratingValue}>{averageRating}</Text>
-              <Ionicons
-                name="star"
-                size={10}
-                color="#2D7FF9"
-                style={{ marginLeft: 4 }}
-              />
+              <Ionicons name="star" size={18} color="#2D7FF9" style={{ marginLeft: 6 }} />
             </View>
-            <Text style={styles.ratingLabel}>Ratings</Text>
+            <Text style={styles.ratingLabel}>
+              {stats.total_reviews} đánh giá
+            </Text>
           </View>
 
           <View style={styles.ratingBars}>
-            {Object.entries(stats)
-              .reverse()
-              .map(([star, count]) => {
-                const total = Object.values(stats).reduce((a, b) => a + b, 0);
-                const percentage = total ? (count / total) * 100 : 0;
-                return (
-                  <View key={star} style={styles.barRow}>
-                    <Text style={styles.starText}>{star}</Text>
-                    <View style={styles.barBackground}>
-                      <LinearGradient
-                        colors={['#5565FB', '#5599FB']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 0 }}
-                        style={[styles.barFill, { width: `${percentage}%` }]}
-                      />
-                    </View>
+            {([5, 4, 3, 2, 1] as const).map(star => {
+              const count = stats.distribution[star];
+              const total = stats.total_reviews;
+              const percentage = total ? (count / total) * 100 : 0;
+              return (
+                <View key={star} style={styles.barRow}>
+                  <Text style={styles.starText}>{star}</Text>
+                  <View style={styles.barBackground}>
+                    <LinearGradient
+                      colors={['#5565FB', '#5599FB']}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={[styles.barFill, { width: `${percentage}%` }]}
+                    />
                   </View>
-                );
-              })}
+                  <Text style={styles.barCount}>{count}</Text>
+                </View>
+              );
+            })}
           </View>
         </View>
 
         {/* Reviews */}
         <View style={styles.reviewsSection}>
-          {reviewList.map(r => (
-            <View key={r.id} style={styles.reviewBox}>
-              <Text style={styles.reviewText}>{r.text}</Text>
+          <Text style={styles.reviewsTitle}>Đánh giá gần đây</Text>
 
-              {/* Stars */}
-              <View style={styles.starRow}>
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Ionicons
-                    key={i}
-                    name={i < r.stars ? 'star' : 'star-outline'}
-                    size={14}
-                    color="#2D7FF9"
-                  />
-                ))}
-              </View>
-
-              <Text style={styles.timeText}>{r.time}</Text>
-            </View>
-          ))}
+          <FlatList
+            data={reviews}
+            keyExtractor={item => item.id.toString()}
+            renderItem={renderReview}
+            ListEmptyComponent={<Text style={styles.emptyText}>Chưa có đánh giá nào</Text>}
+          />
         </View>
       </ScrollView>
     </View>
   );
 }
 
-/* ========================
-   🎨 Styles
-======================== */
+/* 🎨 Styles */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
     paddingHorizontal: 16,
-    paddingBottom: 10,
-    flexDirection: 'column',
   },
 
   statsRow: {
@@ -181,83 +256,126 @@ const styles = StyleSheet.create({
   statBox: { alignItems: 'center' },
   statNumber: { fontSize: 18, fontWeight: '600' },
   statLabel: { color: '#777', fontSize: 13 },
+
   divider: { height: 1, backgroundColor: '#eee', marginVertical: 14 },
 
-  ratingSection: { marginTop: 4, flexDirection: 'row', alignItems: 'center' },
+  ratingSection: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 4,
+  },
   ratingHeader: {
-    flexDirection: 'column',
+    width: '30%',
     alignItems: 'center',
-    justifyContent: 'center',
-    width: '25%',
   },
   ratingValue: {
-    fontSize: 18,
-    fontWeight: '500',
+    fontSize: 28,
+    fontWeight: '700',
     color: '#2D7FF9',
   },
   ratingLabel: {
-    fontSize: 15,
+    fontSize: 14,
     color: '#9B9EA9',
+    marginTop: 4,
   },
-  ratingBars: { marginTop: 6, flex: 1 },
-  barRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 4 },
-  starText: { width: 18, textAlign: 'center', fontSize: 13, color: '#555' },
+  ratingBars: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  barRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  starText: {
+    width: 20,
+    textAlign: 'center',
+    fontSize: 14,
+    color: '#555',
+  },
   barBackground: {
     flex: 1,
-    height: 6,
+    height: 8,
     backgroundColor: '#E8EAF0',
     borderRadius: 4,
-    marginLeft: 8,
     overflow: 'hidden',
+    marginHorizontal: 8,
   },
-  barFill: { height: 6, borderRadius: 4 },
+  barFill: { height: '100%', borderRadius: 4 },
+  barCount: { fontSize: 12, color: '#777', width: 30, textAlign: 'right' },
 
-  reviewsSection: { marginTop: 26 },
+  reviewsSection: { marginTop: 24 },
+  reviewsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
   reviewBox: {
     backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 20,
-    borderColor: '#C9CFE5',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
     borderWidth: 1,
-    shadowColor: '#b2b8cdff',
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
     shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowRadius: 6,
+    elevation: 2,
   },
   starRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
-    marginBottom: 2,
-    gap: 2,
+    marginTop: 8,
+    marginBottom: 8,
   },
-  reviewText: { fontSize: 14, color: '#333', marginBottom: 4 },
-  timeText: { fontSize: 12, color: '#777', textAlign: 'right' },
+  reviewText: {
+    fontSize: 14,
+    color: '#333',
+    lineHeight: 20,
+  },
+  timeText: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 8,
+    textAlign: 'right',
+  },
+  reviewerText: {
+    fontSize: 13,
+    color: '#555',
+    marginTop: 4,
+  },
+  productInfo: {
+    fontSize: 12,
+    color: '#777',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
 
-  buttonRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  msgBtn: {
+  loadingContainer: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: '#2D7FF9',
-    borderRadius: 25,
-    paddingVertical: 10,
-    marginRight: 6,
-    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  msgText: { color: '#2D7FF9', fontWeight: '600', marginLeft: 6 },
-  moreBtn: {
-    flex: 1,
-    backgroundColor: '#2D7FF9',
-    borderRadius: 25,
-    paddingVertical: 10,
-    marginLeft: 6,
-    alignItems: 'center',
+  loadingText: {
+    marginTop: 12,
+    color: '#666',
+    fontSize: 16,
   },
-  moreText: { color: '#fff', fontWeight: '600' },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#F94D4D',
+    textAlign: 'center',
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#999',
+    fontSize: 14,
+    marginTop: 40,
+  },
 });

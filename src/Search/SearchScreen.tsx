@@ -1,7 +1,5 @@
-// SearchScreen.tsx
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  SafeAreaView,
   View,
   Text,
   Image,
@@ -11,7 +9,9 @@ import {
   ActivityIndicator,
   StatusBar,
   Alert,
+  Keyboard,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import BottomSheet from '@gorhom/bottom-sheet';
 import Slider from '@react-native-community/slider';
@@ -38,6 +38,7 @@ interface Product {
 
 export default function SearchScreen() {
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
 
   const [searchText, setSearchText] = useState('');
   const [isSearching, setIsSearching] = useState(false);
@@ -56,16 +57,13 @@ export default function SearchScreen() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [loadingAllProducts, setLoadingAllProducts] = useState(true);
 
-  // Lịch sử tìm kiếm từ local
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
 
-  // Mảng màu cho category
   const categoryColors = [
     '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FECA57',
     '#FF9FF3', '#54A0FF', '#48DBFB', '#A0A6FF', '#FF8B94',
   ];
 
-  // Trending giả lập
   const trendingSearches = [
     'FILA Sweater',
     'Anello Messenger Bags',
@@ -73,7 +71,6 @@ export default function SearchScreen() {
     'FILA Sweater',
   ];
 
-  // Load lịch sử khi mở màn hình
   useEffect(() => {
     loadSearchHistory();
     fetchCategories();
@@ -84,11 +81,10 @@ export default function SearchScreen() {
     try {
       const historyJson = await AsyncStorage.getItem(SEARCH_HISTORY_KEY);
       if (historyJson) {
-        const history = JSON.parse(historyJson);
-        setSearchHistory(history);
+        setSearchHistory(JSON.parse(historyJson));
       }
     } catch (error) {
-      console.error('Lỗi load lịch sử tìm kiếm:', error);
+      console.error('Lỗi load lịch sử:', error);
     }
   };
 
@@ -97,18 +93,15 @@ export default function SearchScreen() {
       await AsyncStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(newHistory));
       setSearchHistory(newHistory);
     } catch (error) {
-      console.error('Lỗi lưu lịch sử tìm kiếm:', error);
+      console.error('Lỗi lưu lịch sử:', error);
     }
   };
 
   const addToHistory = (query: string) => {
     const trimmed = query.trim();
     if (!trimmed) return;
-
-    // Xóa nếu đã có, rồi thêm lên đầu
     const filtered = searchHistory.filter(item => item !== trimmed);
-    const newHistory = [trimmed, ...filtered].slice(0, 10); // Giới hạn 10 mục
-
+    const newHistory = [trimmed, ...filtered].slice(0, 10);
     saveSearchHistory(newHistory);
   };
 
@@ -125,12 +118,10 @@ export default function SearchScreen() {
     try {
       setLoadingCategories(true);
       const response = await fetch('https://bkapp-mp8l.onrender.com/categories/');
-      if (!response.ok) throw new Error('Network error');
       const data: Category[] = await response.json();
       setCategories(data);
     } catch (error) {
       console.error('Lỗi fetch categories:', error);
-      setCategories([]);
     } finally {
       setLoadingCategories(false);
     }
@@ -140,18 +131,16 @@ export default function SearchScreen() {
     try {
       setLoadingAllProducts(true);
       const response = await fetch('https://bkapp-mp8l.onrender.com/products?search=');
-      if (!response.ok) throw new Error('Network error');
       const data = await response.json();
-      const productList: Product[] = data.results || data || [];
-      setAllProducts(productList);
+      setAllProducts(data.results || []);
     } catch (error) {
       console.error('Lỗi fetch all products:', error);
-      setAllProducts([]);
     } finally {
       setLoadingAllProducts(false);
     }
   };
 
+  // 1. TÌM KIẾM THEO TỪ KHÓA
   const performSearch = async (query: string) => {
     const q = query.trim();
     if (!q) {
@@ -159,10 +148,8 @@ export default function SearchScreen() {
       setSearchResults([]);
       return;
     }
-
-    // Lưu vào lịch sử trước khi search
+    Keyboard.dismiss();
     addToHistory(q);
-
     setSearchText(q);
     setIsSearching(true);
     setLoadingResults(true);
@@ -170,24 +157,37 @@ export default function SearchScreen() {
     try {
       const url = `https://bkapp-mp8l.onrender.com/products?search=${encodeURIComponent(q)}`;
       const response = await fetch(url);
-      if (!response.ok) throw new Error('API error');
       const data = await response.json();
-      setSearchResults(data.results || data || []);
+      setSearchResults(data.results || []);
     } catch (error) {
       console.error('Lỗi search:', error);
       Alert.alert('Lỗi', 'Không thể tìm kiếm. Vui lòng thử lại.');
-      setSearchResults([]);
+    } finally {
+      setLoadingResults(false);
+    }
+  };
+
+  // 2. TÌM KIẾM THEO CATEGORY (Sử dụng API ID chuyên biệt)
+  const performCategorySearch = async (categoryId: number, categoryName: string) => {
+    Keyboard.dismiss();
+    setSearchText(categoryName);
+    setIsSearching(true);
+    setLoadingResults(true);
+
+    try {
+      const url = `https://bkapp-mp8l.onrender.com/products/?category=${categoryId}`;
+      const response = await fetch(url);
+      const data = await response.json();
+      setSearchResults(data.results || []);
+    } catch (error) {
+      console.error('Lỗi search category:', error);
+      Alert.alert('Lỗi', 'Không thể lọc theo danh mục này.');
     } finally {
       setLoadingResults(false);
     }
   };
 
   const handleSearchPress = () => performSearch(searchText);
-
-  const handleCategoryPress = (categoryName: string) => {
-    setSearchText(categoryName);
-    performSearch(categoryName);
-  };
 
   const handleBack = () => {
     if (isSearching || searchText.length > 0) {
@@ -202,22 +202,19 @@ export default function SearchScreen() {
   const openFilter = () => bottomSheetRef.current?.expand();
   const closeFilter = () => bottomSheetRef.current?.close();
 
-  // 3 sản phẩm rẻ nhất
-  const cheapestProducts = allProducts.length > 0
-    ? [...allProducts]
-      .sort((a, b) => parseInt(a.price) - parseInt(b.price))
-      .slice(0, 3)
-    : [];
+  const cheapestProducts = [...allProducts]
+    .sort((a, b) => parseInt(a.price) - parseInt(b.price))
+    .slice(0, 3);
 
-  // Sản phẩm nổi bật (ID = 1)
   const featuredProduct = allProducts.find(p => p.id === 1);
 
+  // RENDER CÁC THÀNH PHẦN UI CỦA BẠN
   const renderCategory = ({ item, index }: { item: Category; index: number }) => {
     const color = categoryColors[index % categoryColors.length];
     return (
       <TouchableOpacity
         style={[styles.categoryTag, { backgroundColor: color }]}
-        onPress={() => handleCategoryPress(item.name)}
+        onPress={() => performCategorySearch(item.id, item.name)}
       >
         <Text style={styles.categoryTagText}>{item.name}</Text>
       </TouchableOpacity>
@@ -231,7 +228,7 @@ export default function SearchScreen() {
   );
 
   const renderTrending = (trend: string, index: number) => (
-    <View style={[styles.trendingTag, { backgroundColor: categoryColors[index % categoryColors.length] }]}>
+    <View key={index} style={[styles.trendingTag, { backgroundColor: categoryColors[index % categoryColors.length] }]}>
       <Text style={styles.trendingText}>{trend}</Text>
     </View>
   );
@@ -251,13 +248,10 @@ export default function SearchScreen() {
 
   const DefaultContent = () => (
     <View style={styles.defaultContainer}>
-      {/* Danh mục */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Danh mục</Text>
         {loadingCategories ? (
           <ActivityIndicator color="#4D5BFF" />
-        ) : categories.length === 0 ? (
-          <Text style={styles.emptyText}>Không có danh mục</Text>
         ) : (
           <FlatList
             data={categories}
@@ -269,13 +263,10 @@ export default function SearchScreen() {
         )}
       </View>
 
-      {/* 3 sản phẩm rẻ nhất */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Sản phẩm rẻ nhất</Text>
         {loadingAllProducts ? (
           <ActivityIndicator color="#4D5BFF" />
-        ) : cheapestProducts.length === 0 ? (
-          <Text style={styles.emptyText}>Không có sản phẩm</Text>
         ) : (
           <View style={styles.cheapestRow}>
             {cheapestProducts[0] && (
@@ -290,7 +281,6 @@ export default function SearchScreen() {
                 </View>
               </TouchableOpacity>
             )}
-
             <View style={styles.cheapestSmallColumn}>
               {cheapestProducts.slice(1, 3).map((product) => (
                 <TouchableOpacity
@@ -310,10 +300,9 @@ export default function SearchScreen() {
         )}
       </View>
 
-      {/* Sản phẩm nổi bật */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Sản phẩm nổi bật</Text>
-        {featuredProduct ? (
+        {featuredProduct && (
           <TouchableOpacity
             style={styles.featuredCard}
             onPress={() => navigation.navigate('ProductDetail', { productId: featuredProduct.id })}
@@ -324,8 +313,6 @@ export default function SearchScreen() {
               <Text style={styles.featuredPrice}>{parseInt(featuredProduct.price).toLocaleString('vi-VN')} ₫</Text>
             </View>
           </TouchableOpacity>
-        ) : (
-          <Text style={styles.emptyText}>Không có sản phẩm nổi bật</Text>
         )}
       </View>
     </View>
@@ -349,14 +336,10 @@ export default function SearchScreen() {
 
       <View style={styles.trendingHeader}>
         <Text style={styles.trendingTitle}>Tìm kiếm phổ biến</Text>
-        <TouchableOpacity>
-          <Text style={styles.viewAllText}>View All</Text>
-        </TouchableOpacity>
+        <TouchableOpacity><Text style={styles.viewAllText}>View All</Text></TouchableOpacity>
       </View>
       <View style={styles.trendingList}>
-        {trendingSearches.map((item, index) => (
-          <View key={index}>{renderTrending(item, index)}</View>
-        ))}
+        {trendingSearches.map((item, index) => renderTrending(item, index))}
       </View>
     </View>
   );
@@ -364,7 +347,7 @@ export default function SearchScreen() {
   const ResultsContent = () => (
     <View style={styles.resultsContainer}>
       <View style={styles.resultsHeader}>
-        <Text style={styles.resultsTitle}>Kết quả tìm kiếm: "{searchText}"</Text>
+        <Text style={styles.resultsTitle}>Kết quả cho: "{searchText}"</Text>
         <TouchableOpacity style={styles.filterBtn} onPress={openFilter}>
           <Image source={require('../assets/ic_filter.png')} style={styles.filterIcon} />
           <Text style={styles.filterText}>Lọc</Text>
@@ -384,14 +367,13 @@ export default function SearchScreen() {
           keyExtractor={item => item.id.toString()}
           numColumns={2}
           columnWrapperStyle={styles.resultColumnWrapper}
-        //contentContainerStyle={styles.resultListContainer}
         />
       )}
     </View>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <StatusBar barStyle="light-content" />
 
       <LinearGradient colors={['#5D7CFF', '#8FA8FF']} style={styles.header}>
@@ -412,12 +394,11 @@ export default function SearchScreen() {
                 onSubmitEditing={handleSearchPress}
               />
               {searchText.length > 0 && (
-                <TouchableOpacity style={styles.clearBtn} onPress={() => setSearchText('')}>
+                <TouchableOpacity style={styles.clearBtn} onPress={() => { setSearchText(''); setIsSearching(false); }}>
                   <Text style={styles.clearText}>×</Text>
                 </TouchableOpacity>
               )}
             </View>
-
             <TouchableOpacity style={styles.searchBtn} onPress={handleSearchPress}>
               <Image source={require('../assets/ic_search.png')} style={styles.searchBtnIcon} />
             </TouchableOpacity>
@@ -448,14 +429,12 @@ export default function SearchScreen() {
         <View style={styles.filterContainer}>
           <View style={styles.filterHeader}>
             <Text style={styles.filterTitle}>Bộ lọc</Text>
-            <TouchableOpacity onPress={closeFilter}>
-              <Text style={styles.closeFilter}>×</Text>
-            </TouchableOpacity>
+            <TouchableOpacity onPress={closeFilter}><Text style={styles.closeFilter}>×</Text></TouchableOpacity>
           </View>
           <Text style={styles.filterLabel}>Giá (VND)</Text>
           <Slider
             minimumValue={0}
-            maximumValue={500000}
+            maximumValue={1000000}
             step={10000}
             value={priceMax}
             onValueChange={setPriceMax}
@@ -466,11 +445,18 @@ export default function SearchScreen() {
             <Text>0đ</Text>
             <Text>{priceMax.toLocaleString('vi-VN')}đ</Text>
           </View>
-          <TouchableOpacity style={styles.applyBtn} onPress={closeFilter}>
+          <TouchableOpacity
+            style={styles.applyBtn}
+            onPress={() => {
+              const filtered = searchResults.filter(p => parseInt(p.price) <= priceMax);
+              setSearchResults(filtered);
+              closeFilter();
+            }}
+          >
             <Text style={styles.applyText}>Áp dụng</Text>
           </TouchableOpacity>
         </View>
       </BottomSheet>
-    </SafeAreaView>
+    </View>
   );
 }

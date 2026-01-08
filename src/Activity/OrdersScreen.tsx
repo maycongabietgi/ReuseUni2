@@ -34,17 +34,17 @@ export default function OrdersScreen({ navigation, route }: Props) {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back-outline" size={22} color="#000" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Exchanges</Text>
+        <Text style={styles.headerTitle}>Giao dịch của tôi</Text>
         <View style={{ width: 22 }} />
       </View>
 
       {/* Tabs */}
       <View style={styles.tabs}>
         {[
-          { key: 'requested', label: 'Requested' },
-          { key: 'meeting', label: 'Meeting' },
-          { key: 'completed', label: 'Completed' },
-          { key: 'cancelled', label: 'Cancelled' },
+          { key: 'requested', label: 'Yêu cầu' },
+          { key: 'meeting', label: 'Giao hàng' },
+          { key: 'completed', label: 'Hoàn thành' },
+          { key: 'cancelled', label: 'Đã hủy' },
         ].map(tab => (
           <TouchableOpacity
             key={tab.key}

@@ -5,11 +5,11 @@ import {
     Text,
     TouchableOpacity,
     Image,
-    SafeAreaView,
     ScrollView,
     StatusBar,
     TouchableWithoutFeedback,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { styles } from './SideBar.styles';

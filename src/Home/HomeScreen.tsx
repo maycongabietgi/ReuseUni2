@@ -1,18 +1,19 @@
 // HomeScreen.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  SafeAreaView,
   View,
   Text,
   Image,
   FlatList,
   TouchableOpacity,
   ActivityIndicator,
+  StyleSheet
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import useAuth from '../components/Header/Header';
 import { styles } from './HomeScreen.styles';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface Product {
   id: number;
@@ -36,15 +37,22 @@ interface CartResponse {
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
   const { token: authToken } = useAuth();
+  const insets = useSafeAreaInsets(); // ← Lấy insets để xử lý safe area
 
   const [products, setProducts] = useState<Product[]>([]);
-  const [cartItemCount, setCartItemCount] = useState(0); // ← Số lượng sản phẩm trong giỏ
+  const [cartItemCount, setCartItemCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchLatestProducts();
-    fetchCartItemCount(); // ← Load số lượng giỏ hàng
+    fetchCartItemCount();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchCartItemCount();
+    }, [authToken])
+  );
 
   const fetchLatestProducts = async () => {
     try {
@@ -68,7 +76,6 @@ export default function HomeScreen() {
     }
   };
 
-  // Fetch số lượng sản phẩm trong giỏ hàng
   const fetchCartItemCount = async () => {
     if (!authToken) {
       setCartItemCount(0);
@@ -86,6 +93,7 @@ export default function HomeScreen() {
         const data: CartResponse = await response.json();
         const count = data.items.reduce((sum, item) => sum + item.quantity, 0);
         setCartItemCount(count);
+        console.log('Số lượng giỏ hàng:', count);
       } else {
         setCartItemCount(0);
       }
@@ -118,7 +126,7 @@ export default function HomeScreen() {
           />
           <LinearGradient
             colors={['transparent', 'rgba(0,0,0,0.1)']}
-          //style={StyleSheet.absoluteFill}
+            style={StyleSheet.absoluteFill}
           />
         </View>
 
@@ -169,8 +177,16 @@ export default function HomeScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header với badge giỏ hàng đúng số lượng */}
+    <View
+      style={[
+        styles.container,
+        {
+          paddingTop: insets.top,
+          paddingBottom: insets.bottom,
+        },
+      ]}
+    >
+      {/* Header với badge giỏ hàng */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.navigate('SideBar')}>
           <Image source={require('../assets/ic_menu.png')} style={styles.menuIcon} />
@@ -178,7 +194,7 @@ export default function HomeScreen() {
 
         <View style={styles.headerCenter}>
           <Image
-            source={require('../assets/avatar_placeholder.png')}
+            source={require('../assets/ic_user.png')}
             style={styles.avatar}
           />
           <Text style={styles.greetingText}>Chào, Tester!</Text>
@@ -216,7 +232,10 @@ export default function HomeScreen() {
           keyExtractor={(item) => item.id.toString()}
           numColumns={2}
           columnWrapperStyle={styles.row}
-          contentContainerStyle={styles.listContainer}
+          contentContainerStyle={[
+            styles.listContainer,
+            { paddingBottom: insets.bottom + 100 } // Buffer để floating button không che
+          ]}
           showsVerticalScrollIndicator={false}
           ListHeaderComponent={Banner}
         />
@@ -231,6 +250,6 @@ export default function HomeScreen() {
           <Image source={require('../assets/ic_search.png')} style={styles.searchIcon} />
         </LinearGradient>
       </TouchableOpacity>
-    </SafeAreaView>
+    </View>
   );
 }

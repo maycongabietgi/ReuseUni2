@@ -1,6 +1,6 @@
+// SearchResultsScreen.tsx
 import React, { useState, useEffect } from 'react';
 import {
-    SafeAreaView,
     View,
     Text,
     Image,
@@ -9,6 +9,7 @@ import {
     ActivityIndicator,
     StatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context'; // ← Thay thế SafeAreaView
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { styles } from './SearchResultsScreen.styles';
@@ -33,6 +34,7 @@ export default function SearchResultsScreen() {
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
     const { query = '', discountOnly = false } = (route.params as RouteParams) || {};
+    const insets = useSafeAreaInsets(); // ← Lấy insets để xử lý safe area
 
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
@@ -45,13 +47,13 @@ export default function SearchResultsScreen() {
         try {
             setLoading(true);
 
-            // TODO: Thay bằng API thật
+            // TODO: Thay bằng API thật khi backend sẵn sàng
             // const params = new URLSearchParams();
             // if (query) params.append('q', query);
             // if (discountOnly) params.append('discount_only', 'true');
-            // const res = await fetch(`https://your-api.com/search?${params}`);
+            // const res = await fetch(`https://bkapp-mp8l.onrender.com/products?${params}`);
             // const data = await res.json();
-            // setProducts(data);
+            // setProducts(data.results || data);
 
             // Demo data giống Figma
             await new Promise(resolve => setTimeout(resolve, 800)); // Giả lập loading
@@ -96,6 +98,7 @@ export default function SearchResultsScreen() {
             ]);
         } catch (error) {
             console.error('Fetch products error:', error);
+            setProducts([]);
         } finally {
             setLoading(false);
         }
@@ -130,7 +133,15 @@ export default function SearchResultsScreen() {
     };
 
     return (
-        <SafeAreaView style={styles.container}>
+        <View
+            style={[
+                styles.container,
+                {
+                    paddingTop: insets.top,
+                    paddingBottom: insets.bottom,
+                },
+            ]}
+        >
             <StatusBar barStyle="light-content" />
 
             {/* Header */}
@@ -157,7 +168,7 @@ export default function SearchResultsScreen() {
                     </TouchableOpacity>
                 </View>
 
-                {/* Sort & Filter */}
+                {/* Sort & Filter (đã comment trong code gốc, giữ nguyên) */}
                 {/* <View style={styles.sortFilterRow}>
                     <Text style={styles.sortText}>Sort By: Popularity</Text>
                     <TouchableOpacity style={styles.filterBtn}>
@@ -183,11 +194,14 @@ export default function SearchResultsScreen() {
                     renderItem={renderProduct}
                     keyExtractor={item => item.id}
                     numColumns={2}
-                    contentContainerStyle={styles.listContainer}
+                    contentContainerStyle={[
+                        styles.listContainer,
+                        { paddingBottom: insets.bottom + 80 } // Buffer để tránh che bởi home indicator
+                    ]}
                     columnWrapperStyle={styles.columnWrapper}
                     showsVerticalScrollIndicator={false}
                 />
             )}
-        </SafeAreaView>
+        </View>
     );
 }

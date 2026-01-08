@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,96 +8,201 @@ import {
   StyleSheet,
   Modal,
   TextInput,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../AppNavigator';
+import useAuth from '../components/Header/Header'; // Điều chỉnh path nếu cần
 
-type NavProp = NativeStackNavigationProp<RootStackParamList, 'MyShop'>;
+type NavProp = any; // Thay bằng NativeStackNavigationProp nếu dùng type
 type Props = { navigation: NavProp };
 
-const initialProducts = [
-  {
-    id: 1,
-    name: 'Nike Air Max 97',
-    price: '200k',
-    img: 'https://static.nike.com/a/images/t_PDP_1280_v1/f_auto,q_auto:eco/fa167834-731f-47d5-bdc3-8578415c02df/custom-nike-air-max-97-shoes-by-you.png',
-    status: 'available',
-  },
-  {
-    id: 2,
-    name: 'Nike Hoodie Essential',
-    price: '120k',
-    img: 'https://www.nike.com.kw/dw/image/v2/BDVB_PRD/on/demandware.static/-/Sites-akeneo-master-catalog/default/dwc0a0628d/nk/f24/d/a/e/7/1/f24dae71_2ceb_4dbf_bb56_d00b3cfcd8bb.jpg',
-    status: 'available',
-  },
-  {
-    id: 3,
-    name: 'Nike Dunk Retro',
-    price: '150k',
-    img: 'https://tse2.mm.bing.net/th/id/OIP.f5h0AHJfkVzsDJiH4wWt-gHaHa?rs=1&pid=ImgDetMain&o=7&rm=3',
-    status: 'sold',
-  },
-];
+interface Product {
+  id: number;
+  title: string;
+  price: string;
+  image: string;
+  status: 'AV' | 'SL';
+  description?: string;
+}
 
 export default function ProductsTab({ navigation }: Props) {
-  const [products, setProducts] = useState(initialProducts);
-  const [editing, setEditing] = useState<any | null>(null);
+  const { token: authToken } = useAuth();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Product | null>(null);
+  const [userId, setUserId] = useState<number | null>(null);
 
-  const handleSave = () => {
-    setProducts(prev => prev.map(p => (p.id === editing.id ? editing : p)));
+  // Fetch user ID từ /api/me/
+  useEffect(() => {
+    const fetchUserId = async () => {
+      if (!authToken) {
+        setError('Vui lòng đăng nhập để xem sản phẩm');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch('https://bkapp-mp8l.onrender.com/api/me/', {
+          method: 'GET',
+          headers: {
+            Authorization: `Token ${authToken}`,
+            Accept: 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(`Lỗi ${response.status}: ${errText}`);
+        }
+
+        const data = await response.json();
+        setUserId(data.id); // Lấy ID người dùng hiện tại
+      } catch (err: any) {
+        console.error('Lỗi fetch user ID:', err);
+        setError(err.message || 'Không thể xác định người dùng');
+      }
+    };
+
+    fetchUserId();
+  }, [authToken]);
+
+  // Fetch sản phẩm khi có userId
+  useEffect(() => {
+    if (!userId) return;
+
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await fetch(`https://bkapp-mp8l.onrender.com/products/?seller=${userId}`, {
+          method: 'GET',
+          headers: {
+            Authorization: `Token ${authToken}`,
+            Accept: 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errText = await response.text();
+          throw new Error(`Lỗi ${response.status}: ${errText}`);
+        }
+
+        const data = await response.json();
+        setProducts(data.results || []);
+      } catch (err: any) {
+        console.error('Lỗi fetch sản phẩm:', err);
+        setError(err.message || 'Không thể tải danh sách sản phẩm');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, [userId, authToken]);
+
+  const handleSaveEdit = () => {
+    if (!editing) return;
+
+    // TODO: Gọi API PATCH /products/{id}/ để cập nhật thực tế
+    // Hiện tại: Chỉ update local state (giả lập)
+    setProducts(prev =>
+      prev.map(p => (p.id === editing.id ? { ...editing } : p))
+    );
     setEditing(null);
+    Alert.alert('Thành công', 'Đã cập nhật sản phẩm (giả lập)');
   };
 
-  const renderProduct = (item: any) => (
+  const handleDelete = (id: number) => {
+    Alert.alert(
+      'Xác nhận xóa',
+      'Bạn có chắc chắn muốn xóa sản phẩm này?',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xóa',
+          style: 'destructive',
+          onPress: () => {
+            // TODO: Gọi API DELETE /products/{id}/
+            setProducts(prev => prev.filter(p => p.id !== id));
+            Alert.alert('Thành công', 'Sản phẩm đã được xóa (giả lập)');
+          },
+        },
+      ]
+    );
+  };
+
+  const renderProduct = ({ item }: { item: Product }) => (
     <TouchableOpacity
-      key={item.id}
-      style={[styles.card, item.status === 'sold' && styles.soldCard]}
+      style={[styles.card, item.status === 'SL' && styles.soldCard]}
+      activeOpacity={0.9}
     >
-      <Image source={{ uri: item.img }} style={styles.image} />
-      <Text style={[styles.name, item.status === 'sold' && { color: '#999' }]}>
-        {item.name}
+      <Image source={{ uri: item.image }} style={styles.image} />
+      <Text style={[styles.name, item.status === 'SL' && { color: '#999' }]}>
+        {item.title}
       </Text>
-      <Text style={[styles.price, item.status === 'sold' && { color: '#aaa' }]}>
-        {item.price}
+      <Text style={[styles.price, item.status === 'SL' && { color: '#aaa' }]}>
+        {Number(item.price).toLocaleString('vi-VN')} ₫
       </Text>
 
-      {item.status === 'available' && (
+      {item.status === 'AV' && (
         <View style={styles.actionRow}>
           <TouchableOpacity onPress={() => setEditing(item)}>
-            <Ionicons name="create-outline" size={18} color="#475DFF" />
+            <Ionicons name="create-outline" size={20} color="#475DFF" />
           </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => setProducts(products.filter(p => p.id !== item.id))}
-          >
-            <Ionicons name="trash-outline" size={18} color="#FF4757" />
+          <TouchableOpacity onPress={() => handleDelete(item.id)}>
+            <Ionicons name="trash-outline" size={20} color="#FF4757" />
           </TouchableOpacity>
         </View>
       )}
     </TouchableOpacity>
   );
 
-  const available = products.filter(p => p.status === 'available');
-  const sold = products.filter(p => p.status === 'sold');
+  const available = products.filter(p => p.status === 'AV');
+  const sold = products.filter(p => p.status === 'SL');
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#2D7FF9" />
+        <Text style={styles.loadingText}>Đang tải sản phẩm...</Text>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity onPress={() => window.location.reload()}>
+          <Text style={styles.retryText}>Thử lại</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1 }}>
-      <Text style={styles.sectionTitle}>On Sale</Text>
+      <Text style={styles.sectionTitle}>Đang bán</Text>
       <FlatList
         data={available}
         keyExtractor={item => item.id.toString()}
         numColumns={2}
         columnWrapperStyle={{ justifyContent: 'space-between' }}
-        renderItem={({ item }) => renderProduct(item)}
+        renderItem={renderProduct}
+        ListEmptyComponent={<Text style={styles.emptyText}>Chưa có sản phẩm nào đang bán</Text>}
       />
 
-      <Text style={styles.sectionTitle}>Sold</Text>
+      <Text style={styles.sectionTitle}>Đã bán</Text>
       <FlatList
         data={sold}
         keyExtractor={item => item.id.toString()}
         numColumns={2}
         columnWrapperStyle={{ justifyContent: 'space-between' }}
-        renderItem={({ item }) => renderProduct(item)}
+        renderItem={renderProduct}
+        ListEmptyComponent={<Text style={styles.emptyText}>Chưa có sản phẩm nào đã bán</Text>}
       />
 
       {/* Floating Add Button */}
@@ -108,7 +213,7 @@ export default function ProductsTab({ navigation }: Props) {
         <Ionicons name="add" size={28} color="#fff" />
       </TouchableOpacity>
 
-      {/* ✏️ Modal Edit Product */}
+      {/* Modal Edit Product */}
       <Modal
         visible={!!editing}
         transparent
@@ -117,52 +222,53 @@ export default function ProductsTab({ navigation }: Props) {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
-            <Text style={styles.modalTitle}>Edit Product</Text>
+            <Text style={styles.modalTitle}>Chỉnh sửa sản phẩm</Text>
 
             <TextInput
               style={styles.input}
-              value={editing?.name}
-              onChangeText={t => setEditing({ ...editing, name: t })}
-              placeholder="Product Name"
+              value={editing?.title ?? ''}
+              onChangeText={t => {
+                if (editing) setEditing({ ...editing, title: t });
+              }}
+              placeholder="Tên sản phẩm"
             />
+
             <TextInput
               style={styles.input}
-              value={editing?.price}
-              onChangeText={t => setEditing({ ...editing, price: t })}
-              placeholder="Price"
+              value={editing?.price ?? ''}
+              onChangeText={t => {
+                if (editing) setEditing({ ...editing, price: t });
+              }}
+              placeholder="Giá (VNĐ)"
+              keyboardType="numeric"
             />
 
             <View style={styles.statusRow}>
               <TouchableOpacity
                 style={[
                   styles.statusBtn,
-                  editing?.status === 'available' && styles.activeStatus,
+                  editing?.status === 'AV' && styles.activeStatus,
                 ]}
-                onPress={() => setEditing({ ...editing, status: 'available' })}
+                onPress={() => {
+                  if (editing) setEditing({ ...editing, status: 'AV' });
+                }}
               >
-                <Text
-                  style={[
-                    styles.statusText,
-                    editing?.status === 'available' && styles.activeStatusText,
-                  ]}
-                >
-                  Available
+                <Text style={[styles.statusText, editing?.status === 'AV' && styles.activeStatusText]}>
+                  Đang bán
                 </Text>
               </TouchableOpacity>
+
               <TouchableOpacity
                 style={[
                   styles.statusBtn,
-                  editing?.status === 'sold' && styles.activeStatus,
+                  editing?.status === 'SL' && styles.activeStatus,
                 ]}
-                onPress={() => setEditing({ ...editing, status: 'sold' })}
+                onPress={() => {
+                  if (editing) setEditing({ ...editing, status: 'SL' });
+                }}
               >
-                <Text
-                  style={[
-                    styles.statusText,
-                    editing?.status === 'sold' && styles.activeStatusText,
-                  ]}
-                >
-                  Sold
+                <Text style={[styles.statusText, editing?.status === 'SL' && styles.activeStatusText]}>
+                  Đã bán
                 </Text>
               </TouchableOpacity>
             </View>
@@ -172,14 +278,14 @@ export default function ProductsTab({ navigation }: Props) {
                 style={[styles.modalBtn, { backgroundColor: '#E5E7EB' }]}
                 onPress={() => setEditing(null)}
               >
-                <Text style={{ color: '#333' }}>Cancel</Text>
+                <Text style={{ color: '#333' }}>Hủy</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.modalBtn, { backgroundColor: '#2D7FF9' }]}
-                onPress={handleSave}
+                onPress={handleSaveEdit}
               >
-                <Text style={{ color: '#fff' }}>Save</Text>
+                <Text style={{ color: '#fff' }}>Lưu</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -195,23 +301,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 15,
     color: '#444',
-    marginVertical: 8,
+    marginVertical: 12,
+    paddingHorizontal: 16,
   },
   card: {
     width: '48%',
     backgroundColor: '#fff',
-    borderRadius: 10,
-    marginBottom: 20,
+    borderRadius: 12,
+    marginBottom: 16,
     padding: 10,
-    shadowColor: '#232121ff',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
     elevation: 3,
   },
-  soldCard: { opacity: 0.6, backgroundColor: '#f5f5f5' },
-  image: { width: '100%', height: 130, borderRadius: 10, marginBottom: 10 },
-  name: { fontSize: 14 },
-  price: { fontSize: 14, color: '#475DFF', fontWeight: '600' },
+  soldCard: { opacity: 0.65, backgroundColor: '#f8f8f8' },
+  image: { width: '100%', height: 140, borderRadius: 10, marginBottom: 10 },
+  name: { fontSize: 14, fontWeight: '600', marginBottom: 4 },
+  price: { fontSize: 14, color: '#475DFF', fontWeight: '700' },
   actionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -222,60 +329,68 @@ const styles = StyleSheet.create({
     bottom: 24,
     right: 20,
     backgroundColor: '#2D7FF9',
-    borderRadius: 40,
-    padding: 16,
+    borderRadius: 50,
+    width: 60,
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
     shadowColor: '#2D7FF9',
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 5,
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
   },
 
   /* Modal */
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalBox: {
     width: '85%',
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 10,
   },
   modalTitle: {
-    fontSize: 17,
-    fontWeight: '600',
-    marginBottom: 10,
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 16,
     color: '#111',
   },
   input: {
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderRadius: 10,
-    padding: 10,
-    marginBottom: 12,
+    padding: 12,
+    marginBottom: 16,
+    fontSize: 16,
   },
   statusRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    marginBottom: 20,
   },
   statusBtn: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#ccc',
     alignItems: 'center',
-    marginHorizontal: 4,
+    marginHorizontal: 6,
   },
   activeStatus: {
     backgroundColor: '#E8F1FF',
     borderColor: '#2D7FF9',
   },
-  statusText: { color: '#555', fontWeight: '500' },
-  activeStatusText: { color: '#2D7FF9' },
+  statusText: { color: '#555', fontWeight: '500', fontSize: 14 },
+  activeStatusText: { color: '#2D7FF9', fontWeight: '600' },
 
   modalActions: {
     flexDirection: 'row',
@@ -284,8 +399,36 @@ const styles = StyleSheet.create({
   modalBtn: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 10,
-    borderRadius: 8,
-    marginHorizontal: 5,
+    paddingVertical: 12,
+    borderRadius: 10,
+    marginHorizontal: 6,
+  },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    color: '#666',
+    fontSize: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#F94D4D',
+    textAlign: 'center',
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#999',
+    fontSize: 14,
+    marginTop: 20,
   },
 });

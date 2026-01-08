@@ -23,6 +23,8 @@ import ShopSettingsScreen from './MyShop/ShopSettingsScreen';
 import SearchResultsScreen from './SearchResult/SearchResultsScreen';
 import ProductDetailScreen from './ProductDetail/ProductDetailScreen';
 import CartScreen from './Cart/CartScreen';
+import ChatDetailScreen from './ChatDetail/ChatDetailScreen';
+import ChatListScreen from './ChatList/ChatListScreen';
 export type RootStackParamList = {
   Home: undefined;
   Splash: undefined;
@@ -45,6 +47,8 @@ export type RootStackParamList = {
   // OrdersArriving: undefined;
   EditAddress: { address?: AddressType };
   Cart: undefined;
+  ChatList: undefined;
+  ChatDetail: { chatId: number };
 };
 
 export type AddressType = {
@@ -87,6 +91,8 @@ export default function AppNavigator() {
         <Stack.Screen name="EditAddress" component={EditAddressScreen} />
         <Stack.Screen name="SideBar" component={SideBar} />
         <Stack.Screen name="Cart" component={CartScreen} />
+        <Stack.Screen name="ChatList" component={ChatListScreen} />
+        <Stack.Screen name="ChatDetail" component={ChatDetailScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

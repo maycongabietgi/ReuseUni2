@@ -1,7 +1,6 @@
 // ProductDetailScreen.tsx
 import React, { useState, useEffect } from 'react';
 import {
-    SafeAreaView,
     View,
     Text,
     Image,
@@ -11,9 +10,10 @@ import {
     StatusBar,
     Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context'; // ← Thay thế SafeAreaView
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
-import useAuth from '../components/Header/Header'; // Đường dẫn đúng đến file useAuth của bạn
+import useAuth from '../components/Header/Header';
 import { styles } from './ProductDetailScreen.styles';
 
 interface Product {
@@ -30,6 +30,7 @@ export default function ProductDetailScreen() {
     const navigation = useNavigation<any>();
     const route = useRoute<any>();
     const productId = route.params?.productId;
+    const insets = useSafeAreaInsets(); // ← Lấy insets để xử lý safe area
 
     const { token: authToken, loading: authLoading } = useAuth();
 
@@ -114,9 +115,18 @@ export default function ProductDetailScreen() {
     // Loading
     if (authLoading || loading) {
         return (
-            <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+            <View
+                style={{
+                    flex: 1,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    backgroundColor: '#fff',
+                    paddingTop: insets.top,
+                    paddingBottom: insets.bottom,
+                }}
+            >
                 <ActivityIndicator size="large" color="#4D5BFF" />
-            </SafeAreaView>
+            </View>
         );
     }
 
@@ -125,7 +135,15 @@ export default function ProductDetailScreen() {
     }
 
     return (
-        <SafeAreaView style={styles.container}>
+        <View
+            style={[
+                styles.container,
+                {
+                    paddingTop: insets.top,
+                    paddingBottom: insets.bottom,
+                },
+            ]}
+        >
             <StatusBar barStyle="dark-content" backgroundColor="#fff" />
 
             {/* Header */}
@@ -145,7 +163,10 @@ export default function ProductDetailScreen() {
                 </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: insets.bottom + 120 }} // Buffer để bottom bar không che
+            >
                 {/* Ảnh sản phẩm */}
                 <View style={styles.imageWrapper}>
                     <Image source={{ uri: product.image }} style={styles.productImage} resizeMode="contain" />
@@ -201,6 +222,6 @@ export default function ProductDetailScreen() {
                     </LinearGradient>
                 </TouchableOpacity>
             </View>
-        </SafeAreaView>
+        </View>
     );
 }

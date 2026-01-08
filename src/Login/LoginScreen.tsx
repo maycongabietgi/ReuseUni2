@@ -1,118 +1,150 @@
 // LoginScreen.tsx
 import React, { useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, Alert } from 'react-native';
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  Alert,
+  StyleSheet,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../AppNavigator';
-import { styles } from './LoginScreen.styles';
+import { useNavigation } from '@react-navigation/native';
 
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
-import { Prompt } from 'expo-auth-session';
 
 WebBrowser.maybeCompleteAuthSession();
 
-type LoginScreenNavigationProp = NativeStackNavigationProp<
-  RootStackParamList,
-  'Login'
->;
+export default function LoginScreen() {
+  const navigation = useNavigation<any>();
 
-type Props = {
-  navigation: LoginScreenNavigationProp;
-};
-
-export default function LoginScreen({ navigation }: Props) {
-  /**
-   * 🔐 Google Auth Request
-   * - Dùng WEB client ID (bắt buộc với Expo Go)
-   * - Ép Google luôn hiện chọn tài khoản
-   */
   const [request, response, promptAsync] = Google.useAuthRequest({
+    // ✅ BẮT BUỘC: Web Client ID
     clientId:
       '623155416750-4qp5c1h30u3t2jqoooam2tkcdgpetedo.apps.googleusercontent.com',
-
-    // Cờ chuẩn của expo-auth-session
-    prompt: Prompt.SelectAccount,
-
-    // 🔥 Cái này mới là thứ Google CHẮC CHẮN đọc
-    extraParams: {
-      prompt: 'select_account',
-      access_type: 'offline',
-      include_granted_scopes: 'true',
-    },
   });
 
-  /**
-   * 🧹 Xóa token cũ mỗi lần vào màn Login
-   * (để test login lại từ đầu)
-   */
-  useEffect(() => {
-    const clearOldToken = async () => {
-      await AsyncStorage.removeItem('userToken');
-      console.log('🧹 Đã xoá token cũ');
-    };
-    clearOldToken();
-  }, []);
-
-  /**
-   * 🎯 Xử lý kết quả đăng nhập Google
-   */
   useEffect(() => {
     if (response?.type === 'success') {
       const { authentication } = response;
 
-      console.log('✅ Google login thành công');
-      console.log('🔥 ACCESS TOKEN:', authentication?.accessToken);
-      console.log('🆔 ID TOKEN:', authentication?.idToken);
-
       if (authentication?.accessToken) {
-        AsyncStorage.setItem('userToken', authentication.accessToken);
-        navigation.replace('Home');
+        AsyncStorage.setItem('userToken', authentication.accessToken)
+          .then(() => navigation.replace('Home'))
+          .catch(() =>
+            Alert.alert('Lỗi', 'Không thể lưu thông tin đăng nhập')
+          );
       } else {
-        Alert.alert('Lỗi', 'Không lấy được access token từ Google');
+        Alert.alert('Lỗi', 'Không nhận được access token');
       }
     }
 
     if (response?.type === 'error') {
-      console.log('❌ Google Auth error:', response);
-      Alert.alert('Lỗi', 'Đăng nhập Google thất bại');
+      Alert.alert(
+        'Đăng nhập thất bại',
+        response.error?.message || 'Vui lòng thử lại'
+      );
     }
-  }, [response, navigation]);
+  }, [response]);
 
   return (
     <View style={styles.container}>
-      {/* Progress Bar */}
       <View style={styles.progressBar}>
         <View style={styles.progressFill} />
       </View>
 
-      {/* Image */}
       <Image
         source={require('../assets/img_waiting2.png')}
         style={styles.image}
+        resizeMode="contain"
       />
 
-      {/* Title */}
       <Text style={styles.title}>
         Immerse in a seamless online {'\n'} shopping experience.
       </Text>
 
-      {/* Subtitle */}
       <Text style={styles.subtitle}>
         We promise that you’ll have the {'\n'} most fuss-free time with us ever.
       </Text>
 
-      {/* Login Button */}
       <TouchableOpacity
         style={[styles.button, !request && styles.buttonDisabled]}
         disabled={!request}
-        onPress={() =>
-          promptAsync({
-          })
-        }
+        onPress={() => promptAsync()}
+        activeOpacity={0.8}
       >
+        <Image
+          source={require('../assets/ic_back.png')}
+          style={styles.googleIcon}
+        />
         <Text style={styles.buttonText}>Login with Google</Text>
       </TouchableOpacity>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 30,
+  },
+  progressBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 6,
+    backgroundColor: '#eee',
+  },
+  progressFill: {
+    width: '40%',
+    height: '100%',
+    backgroundColor: '#4D5BFF',
+  },
+  image: {
+    width: 300,
+    height: 300,
+    marginBottom: 40,
+  },
+  title: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: '#333',
+    marginBottom: 16,
+    lineHeight: 36,
+  },
+  subtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#666',
+    marginBottom: 60,
+    lineHeight: 24,
+  },
+  button: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4285F4',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+    elevation: 8,
+  },
+  buttonDisabled: {
+    backgroundColor: '#aaa',
+  },
+  googleIcon: {
+    width: 24,
+    height: 24,
+    marginRight: 16,
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+});
