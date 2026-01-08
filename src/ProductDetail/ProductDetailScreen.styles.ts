@@ -12,15 +12,20 @@ export const styles = StyleSheet.create({
     // Header
     header: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 16,
-        paddingTop: 12,
-        paddingBottom: 12,
+        paddingVertical: 12,
         backgroundColor: '#fff',
         borderBottomWidth: 1,
         borderBottomColor: '#eee',
     },
+
+    rightActions: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginLeft: 'auto', // đẩy cả cụm sang phải
+    },
+
 
     headerButton: {
         width: 44,

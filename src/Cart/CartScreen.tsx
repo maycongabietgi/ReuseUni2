@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import useAuth from '../components/Header/Header';
+import * as Sentry from '@sentry/react-native';
 
 interface CartItem {
     id: number;
@@ -161,7 +162,7 @@ export default function CartScreen() {
 
                             const data = JSON.parse(responseText);
                             Alert.alert('🎉 Thành công', data.message || 'Đã đặt hàng thành công!');
-                            await fetchCart(); // Reload giỏ hàng sau khi thanh toán
+                            await fetchCart(); // Reload giỏ hàng
                         } catch (error: any) {
                             console.error('Checkout error:', error);
                             Alert.alert('❌ Lỗi thanh toán', error.message);
@@ -178,7 +179,10 @@ export default function CartScreen() {
         const finalUri = getFullImageUrl(item.product.image);
 
         return (
-            <View style={styles.card}>
+            <TouchableOpacity
+                style={styles.card}
+                onPress={() => navigation.navigate('ProductDetail', { productId: item.product.id })} // ← Thêm onPress để đi tới ProductDetail
+            >
                 {/* Ảnh sản phẩm bên trái */}
                 <View style={styles.imageWrapper}>
                     <Image
@@ -205,7 +209,7 @@ export default function CartScreen() {
                         <Text style={styles.qtyText}>x{item.quantity}</Text>
                     </View>
                 </View>
-            </View>
+            </TouchableOpacity>
         );
     };
 
@@ -235,8 +239,16 @@ export default function CartScreen() {
                 <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
                     <Ionicons name="arrow-back" size={26} color="#1A1A1A" />
                 </TouchableOpacity>
+
                 <Text style={styles.headerTitle}>Giỏ hàng</Text>
-                <View style={{ width: 40 }} />
+
+                {/* Nút báo lỗi bên phải */}
+                <TouchableOpacity
+                    onPress={() => Sentry.showFeedbackWidget()}
+                    style={styles.reportBtn}
+                >
+                    <Ionicons name="bug-outline" size={22} color="#4D5BFF" />
+                </TouchableOpacity>
             </View>
 
             <FlatList
@@ -299,6 +311,9 @@ const styles = StyleSheet.create({
         fontSize: 19,
         fontWeight: '700',
         color: '#1A1A1A',
+    },
+    reportBtn: {
+        padding: 6,
     },
     card: {
         flexDirection: 'row',

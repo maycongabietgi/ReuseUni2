@@ -115,7 +115,7 @@ export default function ShopScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff', paddingHorizontal: 16 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 50, paddingBottom: 10 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 20, paddingBottom: 10 },
   headerTitle: { fontSize: 18, fontWeight: '700' },
   shopInfo: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, marginTop: 10 },
   avatar: { width: 65, height: 65, borderRadius: 32.5, marginRight: 15, borderWidth: 1, borderColor: '#eee' },

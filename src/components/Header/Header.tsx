@@ -8,7 +8,7 @@ export type AuthInfo = {
   loading: boolean;
 };
 
-const TEST_TOKEN = 'd2340b3db37f1f920464f211e8db0f7c8f5799a7';
+const TEST_TOKEN = 'e9d7a608a441910496db97205346aa59963b7d83';
 
 let cachedToken: string | null = TEST_TOKEN; // ← Cache global
 

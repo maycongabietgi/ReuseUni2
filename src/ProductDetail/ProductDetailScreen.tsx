@@ -14,7 +14,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import useAuth from '../components/Header/Header';
 import { styles } from './ProductDetailScreen.styles';
-
+import * as Sentry from '@sentry/react-native';
+import { Ionicons } from '@expo/vector-icons';
 interface Product {
     id: number;
     title: string;
@@ -189,13 +190,36 @@ export default function ProductDetailScreen() {
 
             {/* Header */}
             <View style={styles.header}>
-                <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-                    <Image source={require('../assets/ic_back.png')} style={styles.backIcon} />
+                {/* Left */}
+                <TouchableOpacity
+                    onPress={() => navigation.goBack()}
+                    style={styles.headerButton}
+                >
+                    <Image
+                        source={require('../assets/ic_back.png')}
+                        style={styles.backIcon}
+                    />
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.headerButton} onPress={() => navigation.navigate('Cart')}>
-                    <Image source={require('../assets/ic_bag.png')} style={styles.backIcon} />
-                </TouchableOpacity>
+                {/* Right icons */}
+                <View style={styles.rightActions}>
+                    <TouchableOpacity
+                        style={styles.headerButton}
+                        onPress={() => navigation.navigate('Cart')}
+                    >
+                        <Image
+                            source={require('../assets/ic_bag.png')}
+                            style={styles.backIcon}
+                        />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={styles.headerButton}
+                        onPress={() => Sentry.showFeedbackWidget()}
+                    >
+                        <Ionicons name="bug-outline" size={24} color="#ff4d4d" />
+                    </TouchableOpacity>
+                </View>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>

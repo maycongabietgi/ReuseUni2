@@ -148,9 +148,9 @@ export default function ProductsTab({ navigation }: Props) {
   const renderProduct = ({ item }: { item: Product }) => (
     <TouchableOpacity
       style={[styles.card, item.status === 'SL' && styles.soldCard]}
+      onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
       activeOpacity={0.9}
     >
-      console.log('Product image URL:', fixHttpToHttps(item.image));
       <Image source={{ uri: fixHttpToHttps(item.image) }} style={styles.image} />
       <Text style={[styles.name, item.status === 'SL' && { color: '#999' }]}>
         {item.title}

@@ -1,113 +1,104 @@
-import React, { useState, useEffect } from 'react';
+// LoginScreen.tsx
+import React from 'react';
 import {
   View,
-  Button,
-  Alert,
-  StyleSheet,
   Text,
-  ActivityIndicator,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
 } from 'react-native';
-import {
-  GoogleSignin,
-  statusCodes,
-} from '@react-native-google-signin/google-signin';
+import { useNavigation } from '@react-navigation/native';
 
-const LoginScreen: React.FC = () => {
-  const [loading, setLoading] = useState<boolean>(false);
+export default function LoginScreen() {
+  const navigation = useNavigation<any>();
 
-  useEffect(() => {
-    GoogleSignin.configure({
-      webClientId:
-        '48475528916-v4j2qg40mtqlt256iige8pj4nrk0nr9h.apps.googleusercontent.com',
-      offlineAccess: true,
-    });
-  }, []);
-
-  const signIn = async (): Promise<void> => {
-    setLoading(true);
-    try {
-      await GoogleSignin.hasPlayServices();
-
-      await GoogleSignin.signIn();
-
-      const { accessToken } = await GoogleSignin.getTokens();
-      console.log('Access Token từ Google:', accessToken);
-
-      await callBackend(accessToken);
-    } catch (error: any) {
-      setLoading(false);
-
-      if (error?.code === statusCodes.SIGN_IN_CANCELLED) {
-        console.log('Hủy đăng nhập');
-      } else if (error?.code === statusCodes.IN_PROGRESS) {
-        Alert.alert('Thông báo', 'Đang đăng nhập, vui lòng đợi');
-      } else if (error?.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
-        Alert.alert('Lỗi', 'Google Play Services không khả dụng');
-      } else {
-        Alert.alert(
-          'Lỗi Google',
-          error?.message || 'Đăng nhập Google thất bại'
-        );
-      }
-    }
-  };
-
-  const callBackend = async (token: string): Promise<void> => {
-    try {
-      const response = await fetch(
-        'https://bkapp-mp8l.onrender.com/auth/social/login/',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            provider: 'google',
-            access_token: token,
-          }),
-        }
-      );
-
-      const data = await response.json();
-      setLoading(false);
-
-      if (response.ok) {
-        Alert.alert('Thành công', `Token Django: ${data.key}`);
-        // TODO: Lưu data.key (AsyncStorage) + điều hướng màn hình
-      } else {
-        console.log('Lỗi Backend:', data);
-        Alert.alert('Lỗi đăng nhập', JSON.stringify(data));
-      }
-    } catch (error) {
-      setLoading(false);
-      Alert.alert('Lỗi mạng', 'Không kết nối được tới server Django');
-    }
+  const handleStart = () => {
+    navigation.replace('Home');
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Test Google Login</Text>
+      <View style={styles.progressBar}>
+        <View style={styles.progressFill} />
+      </View>
 
-      {loading ? (
-        <ActivityIndicator size="large" color="blue" />
-      ) : (
-        <Button title="Đăng nhập bằng Google" onPress={signIn} />
-      )}
+      <Image
+        source={require('../assets/img_waiting2.png')}
+        style={styles.image}
+        resizeMode="contain"
+      />
+
+      <Text style={styles.title}>
+        Immerse in a seamless online {'\n'} shopping experience.
+      </Text>
+
+      <Text style={styles.subtitle}>
+        We promise that you’ll have the {'\n'} most fuss-free time with us ever.
+      </Text>
+
+      {/* NÚT START */}
+      <TouchableOpacity
+        style={styles.button}
+        onPress={handleStart}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.buttonText}>Start</Text>
+      </TouchableOpacity>
     </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    backgroundColor: '#fff',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 30,
+  },
+  progressBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 6,
+    backgroundColor: '#eee',
+  },
+  progressFill: {
+    width: '40%',
+    height: '100%',
+    backgroundColor: '#4D5BFF',
+  },
+  image: {
+    width: 300,
+    height: 300,
+    marginBottom: 40,
   },
   title: {
-    marginBottom: 20,
+    fontSize: 26,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    color: '#333',
+    marginBottom: 16,
+    lineHeight: 36,
+  },
+  subtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#666',
+    marginBottom: 60,
+    lineHeight: 24,
+  },
+  button: {
+    backgroundColor: '#4D5BFF',
+    paddingHorizontal: 40,
+    paddingVertical: 16,
+    borderRadius: 12,
+    elevation: 8,
+  },
+  buttonText: {
+    color: '#fff',
     fontSize: 18,
     fontWeight: '600',
   },
 });
-
-export default LoginScreen;

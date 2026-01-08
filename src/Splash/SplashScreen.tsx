@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../AppNavigator';
 import { styles } from './SplashScreen.styles';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type SplashScreenNavigationProp = NativeStackNavigationProp<
   RootStackParamList,
@@ -15,7 +16,8 @@ type Props = {
 };
 
 export default function SplashScreen({ navigation }: Props) {
-  const handlePress = () => {
+  const handlePress = async () => { // Thêm async ở đây
+    await AsyncStorage.setItem('hasLaunched', '1');
     navigation.navigate('Waiting');
   };
 

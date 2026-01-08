@@ -54,7 +54,7 @@ export default function SideBar() {
         { title: 'Cửa hàng', screen: 'MyShop', icon: require('../../assets/ic_shop.png') },
         { title: 'Giỏ hàng', screen: 'Cart', icon: require('../../assets/ic_cart.png') },
         { title: 'Tìm kiếm', screen: 'Search', icon: require('../../assets/ic_search.png') },
-        { title: 'Đăng xuất', screen: 'Login', icon: require('../../assets/ic_logout.png'), isLogout: true },
+        { title: 'Đăng xuất', screen: 'Splash', icon: require('../../assets/ic_logout.png'), isLogout: true },
     ];
 
     const handleNavigate = (screen: string) => {

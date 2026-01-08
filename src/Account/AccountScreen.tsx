@@ -16,7 +16,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../AppNavigator';
 import useAuth from '../components/Header/Header';
 import { useFocusEffect } from '@react-navigation/native';
-
+import * as Sentry from '@sentry/react-native';
 type AccountNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Account'>;
 
 type Props = {
@@ -150,8 +150,8 @@ export default function AccountScreen({ navigation }: Props) {
           <TouchableOpacity onPress={() => navigation.navigate('SideBar')}>
             <Ionicons name="menu" size={24} color="#000" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
-            <Ionicons name="settings-outline" size={22} color="#000" />
+          <TouchableOpacity onPress={() => Sentry.showFeedbackWidget()}>
+            <Ionicons name="bug-outline" size={25} color="#ff4d4dff" />
           </TouchableOpacity>
         </View>
 
