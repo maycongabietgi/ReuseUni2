@@ -1,6 +1,18 @@
 import React from 'react';
 import { View, Text, Image, StyleSheet, TouchableOpacity } from 'react-native';
 
+const fixHttpToHttps = (url: string | null | undefined): string => {
+  if (!url) return url || ''; // Giữ nguyên nếu null/undefined
+
+  // Nếu bắt đầu bằng http:// → thay bằng https://
+  if (url.startsWith('http://')) {
+    return url.replace(/^http:\/\//i, 'https://');
+  }
+
+  // Các trường hợp khác giữ nguyên
+  return url;
+};
+
 const products = [
   {
     id: 1,

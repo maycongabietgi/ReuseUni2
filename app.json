@@ -23,6 +23,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
+      "softwareKeyboardLayoutMode": "resize",
       "package": "com.qh20166.ReuseUni2"
     },
     "web": {
@@ -37,7 +38,8 @@
           "project": "react-native",
           "organization": "tran-quang-huy"
         }
-      ]
+      ],
+      "expo-secure-store"
     ],
     "extra": {
       "eas": {

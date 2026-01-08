@@ -1,78 +1,177 @@
 import { StyleSheet, Dimensions } from 'react-native';
+
 const { width } = Dimensions.get('window');
-export const CARD_WIDTH = (width - 40) / 2;
+const CARD_WIDTH = (width - 48) / 2;
 
 export const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F7F8FB' },
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9ff'
+  },
+
+  // Header
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 15,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    elevation: 3,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  headerCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 20, // Khoảng cách từ menu đến cụm avatar
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconBtn: {
+    marginLeft: 18,
+  },
+  cartBtn: {
+    marginLeft: 18,
+    position: 'relative',
+  },
+  menuIcon: { width: 28, height: 28, tintColor: '#4D5BFF' },
+  avatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    borderColor: '#4D5BFF',
+    marginRight: 12, // Khoảng cách avatar đến chữ Chào
+  },
+  greetingText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    maxWidth: 140
+  },
+  cartIcon: { width: 30, height: 30, tintColor: '#4D5BFF' },
+
+  badge: {
+    position: 'absolute',
+    right: -6, top: -6,
+    backgroundColor: '#FF3B30',
+    borderRadius: 11,
+    minWidth: 22, height: 22,
+    justifyContent: 'center', alignItems: 'center',
+    borderWidth: 2, borderColor: '#fff',
+  },
+  badgeText: { color: '#fff', fontSize: 11, fontWeight: 'bold' },
+
+  // Banner
+  bannerContainer: {
+    margin: 16,
+    borderRadius: 22,
+    overflow: 'hidden',
+    elevation: 5,
+  },
+  banner: {
+    flexDirection: 'row',
+    padding: 25,
+    alignItems: 'center'
+  },
+  bannerContent: { flex: 1 },
+  bannerTitle: { fontSize: 24, fontWeight: 'bold', color: '#fff' },
+  bannerSubtitle: { fontSize: 16, color: '#fff', marginTop: 6 },
+  bannerCallToAction: { fontSize: 14, color: '#fff', fontWeight: '700', marginTop: 10 },
+  bannerImage: { width: 100, height: 100 },
+
+  // Section Header (Những sản phẩm mới)
+  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingVertical: 10,
-    marginBottom: 10,
-    marginTop: 20,
+    paddingHorizontal: 16,
+    marginBottom: 15,
+    marginTop: 5,
   },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#222' },
-  icon: { width: 24, height: 24, resizeMode: 'contain' },
-  cartBtn: { position: 'relative' },
-  badge: {
-    position: 'absolute',
-    top: -5,
-    right: -8,
-    backgroundColor: '#FF3B6B',
-    borderRadius: 10,
-    paddingHorizontal: 5,
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#1A1A1A',
   },
-  badgeText: { color: '#fff', fontSize: 10, fontWeight: '700' },
-  banner: {
-    marginHorizontal: 20,
-    borderRadius: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 18,
-    elevation: 5,
-    marginBlock: 20,
+  seeAllText: {
+    fontSize: 14,
+    color: '#4D5BFF',
+    fontWeight: '600',
   },
-  bannerText: { flex: 1 },
-  bannerTitle: { color: '#FFD700', fontSize: 13, fontWeight: '700' },
-  bannerSubtitle: { color: '#fff', fontSize: 16, fontWeight: '600', marginTop: 4 },
-  bannerImage: { width: 100, height: 100, resizeMode: 'contain' },
-  listContainer: { paddingHorizontal: 10, paddingBottom: 120 },
-  row: { justifyContent: 'space-between' },
+
+  // Card sản phẩm
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
     width: CARD_WIDTH,
-    padding: 25,
-    marginBottom: 16,
-    elevation: 3,
+    backgroundColor: '#fff',
+    borderRadius: 18,
+    marginBottom: 20,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
   },
-  discountTag: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: '#FF4081',
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    zIndex: 1,
+  imageContainer: {
+    backgroundColor: '#f0f0f0',
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18
   },
-  discountText: { color: '#fff', fontSize: 10, fontWeight: '700' },
-  productImage: { width: '100%', height: CARD_WIDTH * 0.7, resizeMode: 'contain', borderRadius: 10 },
-  productName: { fontSize: 13, fontWeight: '600', marginTop: 8 },
-  soldText: { fontSize: 11, color: '#666', marginTop: 3 },
-  progressBar: { height: 6, backgroundColor: '#E5E8F0', borderRadius: 6, marginTop: 5, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: '#6C8CFF' },
-  priceText: { fontSize: 14, fontWeight: '700', color: '#000', marginTop: 6 },
+  productImage: {
+    width: '100%',
+    height: 190, // Tăng chiều cao ảnh
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18
+  },
+  cardContent: { padding: 14 },
+  productName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+    height: 44
+  },
+  priceText: {
+    fontSize: 17,
+    fontWeight: 'bold',
+    color: '#4D5BFF',
+    marginTop: 8
+  },
+
+  row: {
+    justifyContent: 'space-between',
+    paddingHorizontal: 16
+  },
+  listContainer: {
+    paddingBottom: 120
+  },
+
+  // Loading
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Floating Search
   floatingButton: {
     position: 'absolute',
-    bottom: 28,
-    alignSelf: 'center',
-    backgroundColor: '#4A7DFF',
-    borderRadius: 40,
-    padding: 16,
+    right: 20,
+    bottom: 30
+  },
+  floatingGradient: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
     elevation: 8,
   },
-  searchIcon: { width: 24, height: 24, tintColor: '#fff' },
+  searchIcon: { width: 30, height: 30, tintColor: '#fff' },
 });
