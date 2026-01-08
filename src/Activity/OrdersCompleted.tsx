@@ -3,64 +3,130 @@ import {
   View,
   Text,
   Image,
-  StyleSheet,
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
   Alert,
+  StyleSheet
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import useAuth from '../components/Header/Header'; // Adjust path if needed
+import useAuth from '../components/Header/Header'; // Điều chỉnh path nếu cần
 
 export default function OrdersCompleted({ navigation }: any) {
   const { token: authToken } = useAuth();
-  const currentUserId = 2; // Thay bằng ID user hiện tại (lấy từ auth/profile)
 
   const [completedTrades, setCompletedTrades] = useState<any[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // 1. Fetch ID người dùng hiện tại
   useEffect(() => {
-    fetchCompletedOrders();
-  }, []);
+    const fetchCurrentUserId = async () => {
+      if (!authToken) {
+        setError('Vui lòng đăng nhập để xem đơn hàng');
+        setLoading(false);
+        return;
+      }
 
-  const fetchCompletedOrders = async () => {
+      try {
+        const response = await fetch('https://bkapp-mp8l.onrender.com/api/me/', {
+          method: 'GET',
+          headers: {
+            Authorization: `Token ${authToken}`,
+            Accept: 'application/json',
+          },
+        });
+
+        if (!response.ok) throw new Error(`Lỗi ${response.status}`);
+        const data = await response.json();
+        setCurrentUserId(data.id);
+      } catch (err: any) {
+        console.error('Lỗi fetch user ID:', err);
+        setError('Không thể xác định người dùng');
+      }
+    };
+
+    fetchCurrentUserId();
+  }, [authToken]);
+
+  // 2. Fetch đơn hàng hoàn tất
+  useEffect(() => {
+    if (currentUserId === null || !authToken) return;
+
+    const fetchCompletedOrders = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await fetch('https://bkapp-mp8l.onrender.com/orders', {
+          method: 'GET',
+          headers: {
+            Authorization: `Token ${authToken}`,
+            Accept: 'application/json',
+          },
+        });
+
+        if (!response.ok) throw new Error(`Lỗi ${response.status}`);
+        const data = await response.json();
+        const completed = data.filter((order: any) => order.status === 'CM');
+        setCompletedTrades(completed);
+      } catch (err: any) {
+        console.error('Lỗi fetch completed orders:', err);
+        setError(err.message || 'Không thể tải đơn hàng');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCompletedOrders();
+  }, [currentUserId, authToken]);
+
+  const fixHttpToHttps = (url: string | null | undefined): string => {
+    if (!url) return '';
+    return url.replace(/^http:\/\//i, 'https://');
+  };
+
+  // 3. Hàm xử lý chat hoàn chỉnh
+  const handleChat = async (targetUserId: number) => {
     if (!authToken) {
-      setError('Vui lòng đăng nhập để xem đơn hàng đã hoàn tất');
-      setLoading(false);
+      Alert.alert('Lỗi', 'Vui lòng đăng nhập để chat');
+      return;
+    }
+
+    if (currentUserId && targetUserId === currentUserId) {
+      Alert.alert('Thông báo', 'Không thể chat với chính mình.');
       return;
     }
 
     try {
-      setLoading(true);
-      setError(null);
-
-      const response = await fetch('https://bkapp-mp8l.onrender.com/orders', {
-        method: 'GET',
+      const response = await fetch('https://bkapp-mp8l.onrender.com/chats/start', {
+        method: 'POST',
         headers: {
-          'Authorization': `Token ${authToken}`,
-          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+          Authorization: `Token ${authToken}`,
         },
+        body: JSON.stringify({
+          target_user_id: targetUserId,
+        }),
       });
 
+      const result = await response.json();
+
       if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`Lỗi ${response.status}: ${errText}`);
+        throw new Error(result.message || 'Không thể khởi tạo chat');
       }
 
-      const data = await response.json();
-
-      // Lọc chỉ những đơn có status = "CM" (Completed)
-      const completed = data.filter((order: any) => order.status === 'CM');
-
-      setCompletedTrades(completed);
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Lỗi không xác định';
-      console.error('Lỗi fetch completed orders:', err);
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
+      const chatId = result.chat_id;
+      if (chatId) {
+        navigation.navigate('ChatDetail', { chatId });
+      } else {
+        Alert.alert('Lỗi', 'Không nhận được chat ID từ server');
+      }
+    } catch (error: any) {
+      console.error('Lỗi khởi tạo chat:', error);
+      Alert.alert('Lỗi', error.message || 'Không thể mở chat');
     }
   };
 
@@ -77,7 +143,7 @@ export default function OrdersCompleted({ navigation }: any) {
     return (
       <View style={styles.errorContainer}>
         <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity onPress={fetchCompletedOrders}>
+        <TouchableOpacity onPress={() => setLoading(true)}>
           <Text style={styles.retryText}>Thử lại</Text>
         </TouchableOpacity>
       </View>
@@ -97,20 +163,20 @@ export default function OrdersCompleted({ navigation }: any) {
       {completedTrades.map(order => {
         const isSeller = order.seller === currentUserId;
         const roleLabel = isSeller
-          ? `Bạn đã bán cho ${order.buyer_name}`
-          : `Bạn đã mua từ ${order.seller_name}`;
+          ? `Bạn đã bán cho ${order.buyer_name || 'người mua'}`
+          : `Bạn đã mua từ ${order.seller_name || 'người bán'}`;
 
-        const totalQuantity = order.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
+        // Xác định ID người nhận: Nếu mình là người bán thì chat với người mua, và ngược lại
+        const chatWithId = isSeller ? order.buyer : order.seller;
 
         return (
           <View key={order.id} style={styles.tradeCard}>
             <Text style={styles.tradeId}>Giao dịch #{order.id}</Text>
 
-            {/* Danh sách sản phẩm */}
             <View style={styles.productsList}>
               {order.items.map((item: any) => (
                 <View key={item.id} style={styles.row}>
-                  <Image source={{ uri: item.product_image }} style={styles.image} />
+                  <Image source={{ uri: fixHttpToHttps(item.product_image) }} style={styles.image} />
                   <View style={{ flex: 1 }}>
                     <Text style={styles.name}>{item.product_title}</Text>
                     <Text style={styles.price}>
@@ -121,7 +187,6 @@ export default function OrdersCompleted({ navigation }: any) {
               ))}
             </View>
 
-            {/* Thông tin tổng */}
             <View style={styles.infoRow}>
               <Text style={styles.totalPrice}>
                 Tổng: {Number(order.total_price).toLocaleString('vi-VN')} ₫
@@ -136,17 +201,18 @@ export default function OrdersCompleted({ navigation }: any) {
 
             <Text style={styles.role}>{roleLabel}</Text>
 
-            {/* Status */}
             <View style={styles.statusRow}>
-              <Ionicons name="checkmark-circle-outline" size={18} color="#2ECC71" />
+              <Ionicons name="checkmark-circle" size={18} color="#2ECC71" />
               <Text style={styles.statusText}>Hoàn tất</Text>
             </View>
 
-            {/* Actions */}
             <View style={styles.actions}>
-              <TouchableOpacity style={styles.chatBtn}>
+              <TouchableOpacity
+                style={styles.chatBtn}
+                onPress={() => handleChat(chatWithId)}
+              >
                 <Ionicons name="chatbubble-outline" size={16} color="#4C69FF" style={{ marginRight: 8 }} />
-                <Text style={styles.chatText}>Nhắn</Text>
+                <Text style={styles.chatText}>Nhắn tin</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -155,8 +221,6 @@ export default function OrdersCompleted({ navigation }: any) {
               >
                 <LinearGradient
                   colors={['#5565FB', '#5599FB']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 0.9, y: 0.8 }}
                   style={styles.reviewBtn}
                 >
                   <Text style={styles.reviewText}>Đánh giá</Text>
@@ -170,7 +234,6 @@ export default function OrdersCompleted({ navigation }: any) {
   );
 }
 
-/* 🎨 STYLES */
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9F9F9' },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
@@ -180,7 +243,6 @@ const styles = StyleSheet.create({
   retryText: { color: '#4C69FF', fontWeight: '600', fontSize: 16, marginTop: 12 },
   emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
   emptyText: { fontSize: 16, color: '#666', textAlign: 'center' },
-
   tradeCard: {
     margin: 16,
     backgroundColor: '#fff',
@@ -226,17 +288,18 @@ const styles = StyleSheet.create({
   chatBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#4C69FF',
     borderRadius: 10,
     paddingVertical: 10,
-    paddingHorizontal: 18,
+    flex: 1,
+    marginRight: 8,
   },
-  chatText: { color: '#4C69FF', fontWeight: '600', marginLeft: 8 },
-  reviewWrapper: { borderRadius: 10, overflow: 'hidden' },
+  chatText: { color: '#4C69FF', fontWeight: '600', fontSize: 14 },
+  reviewWrapper: { borderRadius: 10, overflow: 'hidden', flex: 1, marginLeft: 8 },
   reviewBtn: {
     paddingVertical: 10,
-    paddingHorizontal: 20,
     alignItems: 'center',
   },
   reviewText: { color: '#fff', fontWeight: '600', fontSize: 14 },

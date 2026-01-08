@@ -38,7 +38,17 @@ export default function SearchResultsScreen() {
 
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
+    const fixHttpToHttps = (url: string | null | undefined): string => {
+        if (!url) return url || ''; // Giữ nguyên nếu null/undefined
 
+        // Nếu bắt đầu bằng http:// → thay bằng https://
+        if (url.startsWith('http://')) {
+            return url.replace(/^http:\/\//i, 'https://');
+        }
+
+        // Các trường hợp khác giữ nguyên
+        return url;
+    };
     useEffect(() => {
         fetchProducts();
     }, [query, discountOnly]);

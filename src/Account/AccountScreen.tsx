@@ -172,7 +172,7 @@ export default function AccountScreen({ navigation }: Props) {
 
         {/* Address Section */}
         <View style={styles.addressHeader}>
-          <Text style={styles.sectionTitle}>Địa chỉ của tôi</Text>
+          <Text style={styles.sectionTitle}>Địa chỉ </Text>
           <TouchableOpacity onPress={() => navigation.navigate('EditAddress', {})}>
             <Ionicons name="add-circle-outline" size={22} color="#000" />
           </TouchableOpacity>

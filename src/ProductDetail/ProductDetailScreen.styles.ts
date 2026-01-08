@@ -67,7 +67,14 @@ export const styles = StyleSheet.create({
         fontSize: 23,
         fontWeight: 'bold',
         color: '#f02323ff',
-        marginBottom: 20,
+        marginBottom: 12,
+    },
+
+    sellerName: {
+        fontSize: 14,
+        color: '#666',
+        marginTop: 8,
+        marginBottom: 16,
     },
 
     sectionTitle: {
@@ -165,5 +172,14 @@ export const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: 'bold',
         color: '#fff',
+    },
+
+    // Disabled state
+    disabledButton: {
+        opacity: 0.5,
+    },
+
+    disabledText: {
+        color: '#999',
     },
 });

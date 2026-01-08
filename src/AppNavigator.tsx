@@ -25,6 +25,9 @@ import ProductDetailScreen from './ProductDetail/ProductDetailScreen';
 import CartScreen from './Cart/CartScreen';
 import ChatDetailScreen from './ChatDetail/ChatDetailScreen';
 import ChatListScreen from './ChatList/ChatListScreen';
+import ShopScreen from './Shop/ShopScreen';
+
+
 export type RootStackParamList = {
   Home: undefined;
   Splash: undefined;
@@ -40,6 +43,7 @@ export type RootStackParamList = {
   Store: undefined;
   Activity: undefined;
   MyShop: undefined;
+  Shop: { sellerId: number };
   AddProduct: undefined;
   ShopSettings: undefined;
   Orders: { defaultTab?: 'requested' | 'meeting' | 'completed' | 'cancelled' };
@@ -93,6 +97,7 @@ export default function AppNavigator() {
         <Stack.Screen name="Cart" component={CartScreen} />
         <Stack.Screen name="ChatList" component={ChatListScreen} />
         <Stack.Screen name="ChatDetail" component={ChatDetailScreen} />
+        <Stack.Screen name="Shop" component={ShopScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

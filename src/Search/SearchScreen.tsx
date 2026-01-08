@@ -166,6 +166,17 @@ export default function SearchScreen() {
       setLoadingResults(false);
     }
   };
+  const fixHttpToHttps = (url: string | null | undefined): string => {
+    if (!url) return url || ''; // Giữ nguyên nếu null/undefined
+
+    // Nếu bắt đầu bằng http:// → thay bằng https://
+    if (url.startsWith('http://')) {
+      return url.replace(/^http:\/\//i, 'https://');
+    }
+
+    // Các trường hợp khác giữ nguyên
+    return url;
+  };
 
   // 2. TÌM KIẾM THEO CATEGORY (Sử dụng API ID chuyên biệt)
   const performCategorySearch = async (categoryId: number, categoryName: string) => {
@@ -238,7 +249,7 @@ export default function SearchScreen() {
       style={styles.resultCard}
       onPress={() => navigation.navigate('ProductDetail', { productId: item.id })}
     >
-      <Image source={{ uri: item.image }} style={styles.resultImage} resizeMode="cover" />
+      <Image source={{ uri: fixHttpToHttps(item.image) }} style={styles.resultImage} resizeMode="cover" />
       <View style={styles.resultInfo}>
         <Text style={styles.resultTitle} numberOfLines={2}>{item.title}</Text>
         <Text style={styles.resultPrice}>{parseInt(item.price).toLocaleString('vi-VN')} ₫</Text>
@@ -274,7 +285,7 @@ export default function SearchScreen() {
                 style={styles.cheapestBigCard}
                 onPress={() => navigation.navigate('ProductDetail', { productId: cheapestProducts[0].id })}
               >
-                <Image source={{ uri: cheapestProducts[0].image }} style={styles.cheapestBigImage} />
+                <Image source={{ uri: fixHttpToHttps(cheapestProducts[0].image) }} style={styles.cheapestBigImage} />
                 <View style={styles.cheapestInfo}>
                   <Text style={styles.cheapestTitle} numberOfLines={2}>{cheapestProducts[0].title}</Text>
                   <Text style={styles.cheapestPrice}>{parseInt(cheapestProducts[0].price).toLocaleString('vi-VN')} ₫</Text>
@@ -288,7 +299,7 @@ export default function SearchScreen() {
                   style={styles.cheapestSmallCard}
                   onPress={() => navigation.navigate('ProductDetail', { productId: product.id })}
                 >
-                  <Image source={{ uri: product.image }} style={styles.cheapestSmallImage} />
+                  <Image source={{ uri: fixHttpToHttps(product.image) }} style={styles.cheapestSmallImage} />
                   <View style={styles.cheapestInfo}>
                     <Text style={styles.cheapestSmallTitle} numberOfLines={2}>{product.title}</Text>
                     <Text style={styles.cheapestSmallPrice}>{parseInt(product.price).toLocaleString('vi-VN')} ₫</Text>
@@ -301,19 +312,7 @@ export default function SearchScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Sản phẩm nổi bật</Text>
-        {featuredProduct && (
-          <TouchableOpacity
-            style={styles.featuredCard}
-            onPress={() => navigation.navigate('ProductDetail', { productId: featuredProduct.id })}
-          >
-            <Image source={{ uri: featuredProduct.image }} style={styles.featuredImage} />
-            <View style={styles.featuredInfo}>
-              <Text style={styles.featuredTitle} numberOfLines={2}>{featuredProduct.title}</Text>
-              <Text style={styles.featuredPrice}>{parseInt(featuredProduct.price).toLocaleString('vi-VN')} ₫</Text>
-            </View>
-          </TouchableOpacity>
-        )}
+
       </View>
     </View>
   );
